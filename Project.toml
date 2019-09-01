@@ -1,0 +1,14 @@
+name = "DeepRL"
+uuid = "0ab49a02-bc84-11e9-2f14-97eb7286eb84"
+authors = ["Matthew Schlegel <mkschleg@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+JuliaRL = "10ec99bc-e54b-11e8-04da-8598ad081a85"
+Lazy = "50d2b5c4-7a5e-59d5-8109-a42b560f39c0"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
