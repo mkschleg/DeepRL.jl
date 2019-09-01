@@ -43,45 +43,56 @@ function episode!(env, agent, rng, max_steps)
 end
 
 
-
-function main_experiment(seed, num_episodes)
-
-    mc = MountainCar(0.0, 0.0, true)
-    rng = MersenneTwister(seed)
-
-    s = JuliaRL.get_state(mc)
+function construct_agent(s, num_actions)
     
     ϵ=0.1
     γ=1.0f0
     batch_size=32
     tn_counter_init = 50
 
-    model = Chain(Dense(length(s), 128, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
-                  Dense(128, 128, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
-                  Dense(128, 32, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
-                  Dense(32, length(JuliaRL.get_actions(mc)); initW=(dims...)->glorot_uniform(rng, dims...)))
+    # model = Chain(Dense(length(s), 128, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
+    #               Dense(128, 128, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
+    #               Dense(128, 32, Flux.relu; initW=(dims...)->glorot_uniform(rng, dims...)),
+    #               Dense(32, length(JuliaRL.get_actions(mc)); initW=(dims...)->glorot_uniform(rng, dims...)))
 
-    target_network = deepcopy(model)
-    Flux.testmode!(target_network)
+    model = Chain(Dense(length(s), 128, Flux.relu; initW=Flux.glorot_uniform),
+                  Dense(128, 128, Flux.relu; initW=Flux.glorot_uniform),
+                  Dense(128, 32, Flux.relu; initW=Flux.glorot_uniform),
+                  Dense(32, num_actions; initW=Flux.glorot_uniform))
+
+    target_network = mapleaves(Flux.Tracker.data, deepcopy(model)::typeof(model))
+    # target_network = deepcopy(model)
     
-    ps = params(model)
     opt = ADAM(0.001)
 
     er = ExperienceReplay(100000,
-                          [Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool];
-                          column_names=[:s, :a, :s′, :r, :t])
+                          (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
+                          (:s, :a, :sp, :r, :t))
 
-    agent = DQNAgent(model,
-                     target_network,
-                     opt,
-                     ϵGreedy(ϵ),
-                     er,
-                     γ,
-                     batch_size,
-                     tn_counter_init,
-                     tn_counter_init,
-                     -1,
-                     s)
+    return DQNAgent(model,
+                    target_network,
+                    opt,
+                    ϵGreedy(ϵ),
+                    er,
+                    γ,
+                    batch_size,
+                    tn_counter_init,
+                    tn_counter_init,
+                    -1,
+                    s)
+end
+
+
+
+function main_experiment(seed, num_episodes)
+
+    mc = MountainCar(0.0, 0.0, true)
+    # rng = MersenneTwister(seed)
+    Random.seed!(Random.GLOBAL_RNG, seed)
+
+    s = JuliaRL.get_state(mc)
+    
+    agent = construct_agent(s, length(JuliaRL.get_actions(mc)))::DQNAgent
 
     total_rews = zeros(num_episodes)
     steps = zeros(Int64, num_episodes)
@@ -91,7 +102,7 @@ function main_experiment(seed, num_episodes)
     p = ProgressMeter.Progress(num_episodes; dt=0.01, desc="Episode:", barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'), barlen=Int64(floor(500/length(front))))
     
     for e in 1:num_episodes
-        total_rews[e], steps[e] = episode!(mc, agent, rng, 50000)
+        total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 50000)
         next!(p)
     end
 
