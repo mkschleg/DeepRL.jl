@@ -18,6 +18,9 @@ include("env.jl")
 export ϵGreedy, sample
 include("policy.jl")
 
+export QLearning, DoubleQLearning
+include("update.jl")
+
 export DQNAgent
 include("agent.jl")
 

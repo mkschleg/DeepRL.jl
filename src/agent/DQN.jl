@@ -2,10 +2,11 @@
 using Flux
 using Random
 
-mutable struct DQNAgent{M, TN, O, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractAgent
+mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractAgent
     model::M
     target_network::TN
     opt::O
+    lu::LU
     ap::AP
     er::ExperienceReplay{ERP}
     γ::Float32
@@ -15,6 +16,23 @@ mutable struct DQNAgent{M, TN, O, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractA
     action::Int64
     prev_s::Φ
 end
+
+DQNAgent(model, target_network, opt, lu, ap, size_buffer, γ, batch_size, tn_counter_init, s) =
+    DQNAgent(model,
+             target_network,
+             opt,
+             lu,
+             ap,
+             ExperienceReplay(100000,
+                              (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
+                              (:s, :a, :sp, :r, :t)),
+             γ,
+             batch_size,
+             tn_counter_init,
+             tn_counter_init,
+             0,
+             s)
+
 
 function JuliaRL.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG=Random.GLOBAL_RNG; kwargs...)
     # Start an Episode
@@ -26,7 +44,7 @@ end
 
 function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
     
-    add!(agent.er, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, !terminal))
+    add!(agent.er, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
     
     if size(agent.er)[1] > 1000
         update_params!(agent, rng)
@@ -46,19 +64,8 @@ function update_params!(agent::DQNAgent, rng)
     e = sample(agent.er, agent.batch_size; rng=rng)
     s_t = hcat(e.s...)
     s_tp1 = hcat(e.sp...)
-    ps = params(agent.model)
 
-    γ = agent.γ.*(e.t)
-    action_idx = [CartesianIndex(e.a[i], i) for i in 1:agent.batch_size]
-
-    q_tp1 = maximum(agent.target_network(s_tp1); dims=1)[1,:]
-    
-    target = (e.r .+ γ.*q_tp1)
-    gs = Flux.gradient(ps) do
-        q_t = agent.model(s_t)[action_idx]
-        return Flux.mse(target, q_t)
-    end
-    Flux.Optimise.update!(agent.opt, ps, gs)
+    update!(agent.model, agent.lu, agent.opt, s_t, e.a, s_tp1, e.r, e.t, agent.target_network)
 
     if agent.target_network_counter == 1
         agent.target_network_counter = agent.tn_counter_init
@@ -72,3 +79,6 @@ function update_params!(agent::DQNAgent, rng)
     return nothing
     
 end
+
+
+

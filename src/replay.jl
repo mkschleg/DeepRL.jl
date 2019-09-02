@@ -20,16 +20,15 @@ function sample(er::ExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     return getrow(er.buffer, idx)
 end
 
-# Base.show(io::IO, er::ExperienceReplay) =
-#     show(io, ("ExperienceReplay", er.buffer._names, er.buffer._data_types))
 
-mutable struct WeightedExperienceReplay
-    buffer::CircularBuffer
+mutable struct WeightedExperienceReplay{CB}
+    buffer::CB
     sumtree::SumTree
-    WeightedExperienceReplay(size, types, column_names) =
-        new(CircularBuffer(size, types, column_names),
-            SumTree{Int64}(size))
 end
+
+WeightedExperienceReplay(size, types, column_names) =
+    new(CircularBuffer(size, types, column_names),
+        SumTree{Int64}(size))
 
 size(er::WeightedExperienceReplay) = size(er.buffer)
 getindex(er::WeightedExperienceReplay, idx) = getindex(er.buffer, idx)
@@ -44,5 +43,3 @@ function sample(er::WeightedExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     return getrow(er.buffer, idx)
 end
 
-# Base.show(io::IO, er::WeightedExperienceReplay) =
-#     show(io, ("WeightedExperienceReplay", er.buffer._names, er.buffer._data_types))
