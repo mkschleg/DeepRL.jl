@@ -2,6 +2,30 @@
 abstract type LearningUpdate end
 
 
+function update!(model,
+                 lu::T,
+                 opt,
+                 s_t::Array{Array{AF, 1}, 1},
+                 a_t::Array{<:Integer, 1},
+                 s_tp1::Array{Array{AF, 1}, 1},
+                 r::Array{AF, 1},
+                 terminal::Array{Bool, 1},
+                 target_model) where {AF<:AbstractFloat, T<:LearningUpdate}
+    update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal, target_model)
+end
+
+function update!(model,
+                 lu::T,
+                 opt,
+                 s_t::Array{Array{AF, 1}, 1},
+                 a_t::Array{<:Integer, 1},
+                 s_tp1::Array{Array{AF, 1}, 1},
+                 r::Array{AF, 1},
+                 terminal::Array{Bool, 1}) where {AF<:AbstractFloat, T<:LearningUpdate}
+    update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal)
+end
+
+
 struct QLearning <: LearningUpdate
     γ::Float32
 end
@@ -10,7 +34,13 @@ struct DoubleQLearning <: LearningUpdate
     γ::Float32
 end
 
-function update!(model, lu::QLearning, opt, s_t, a_t, s_tp1, r, terminal, target_model)
+function update!(model, lu::QLearning, opt,
+                 s_t::Array{<:AbstractFloat, 2},
+                 a_t::Array{<:Integer, 1},
+                 s_tp1::Array{<:AbstractFloat, 2},
+                 r::Array{<:AbstractFloat, 1},
+                 terminal::Array{Bool, 1},
+                 target_model)
 
     ps = params(model)
     γ = lu.γ.*(1 .- terminal)
@@ -26,8 +56,13 @@ function update!(model, lu::QLearning, opt, s_t, a_t, s_tp1, r, terminal, target
     Flux.Optimise.update!(opt, ps, gs)
 end
 
-function update!(model, lu::QLearning, opt, s_t, a_t, s_tp1, r, terminal)
-
+function update!(model, lu::QLearning, opt,
+                 s_t::Array{<:AbstractFloat, 2},
+                 a_t::Array{<:Integer, 1},
+                 s_tp1::Array{<:AbstractFloat, 2},
+                 r::Array{<:AbstractFloat, 1},
+                 terminal::Array{Bool, 1})
+    
     ps = params(model)
     
     γ = lu.γ.*(1 .- terminal)
@@ -44,7 +79,12 @@ function update!(model, lu::QLearning, opt, s_t, a_t, s_tp1, r, terminal)
 
 end
 
-function update!(model, lu::DoubleQLearning, opt, s_t, a_t, s_tp1, r, terminal, target_model)
+function update!(model, lu::DoubleQLearning, opt,
+                 s_t::Array{<:AbstractFloat, 2},
+                 a_t::Array{<:Integer, 1},
+                 s_tp1::Array{<:AbstractFloat, 2},
+                 r::Array{<:AbstractFloat, 1},
+                 terminal::Array{Bool, 1})
 
     ps = params(model)
     

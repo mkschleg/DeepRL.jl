@@ -47,7 +47,8 @@ function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBA
     add!(agent.er, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
     
     if size(agent.er)[1] > 1000
-        update_params!(agent, rng)
+        e = sample(agent.er, agent.batch_size; rng=rng)
+        update_params!(agent, e)
     end
     
     agent.prev_s .= env_s_tp1
@@ -58,14 +59,9 @@ function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBA
     return agent.action
 end
 
-function update_params!(agent::DQNAgent, rng)
+function update_params!(agent::DQNAgent, e)
     
-
-    e = sample(agent.er, agent.batch_size; rng=rng)
-    s_t = hcat(e.s...)
-    s_tp1 = hcat(e.sp...)
-
-    update!(agent.model, agent.lu, agent.opt, s_t, e.a, s_tp1, e.r, e.t, agent.target_network)
+    update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
 
     if agent.target_network_counter == 1
         agent.target_network_counter = agent.tn_counter_init

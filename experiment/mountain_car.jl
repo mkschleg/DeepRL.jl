@@ -74,7 +74,12 @@ function main_experiment(seed, num_episodes)
 
     
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
-    p = ProgressMeter.Progress(num_episodes; dt=0.01, desc="Episode:", barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'), barlen=Int64(floor(500/length(front))))
+    p = ProgressMeter.Progress(
+        num_episodes;
+        dt=0.01,
+        desc="Episode:",
+        barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
+        barlen=Int64(floor(500/length(front))))
     
     for e in 1:num_episodes
         total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 50000)
