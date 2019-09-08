@@ -34,7 +34,7 @@ DQNAgent(model, target_network, opt, lu, ap, size_buffer, γ, batch_size, tn_cou
              s)
 
 
-function JuliaRL.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG=Random.GLOBAL_RNG; kwargs...)
+function JuliaRL.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG; kwargs...)
     # Start an Episode
     agent.action = sample(agent.ap,
                           agent.model(env_s_tp1),
@@ -42,7 +42,7 @@ function JuliaRL.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG=Random.GLOB
     return agent.action
 end
 
-function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
+function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
     
     add!(agent.er, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
     
@@ -50,6 +50,7 @@ function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBA
         e = sample(agent.er, agent.batch_size; rng=rng)
         update_params!(agent, e)
     end
+
     
     agent.prev_s .= env_s_tp1
     agent.action = sample(agent.ap,
@@ -60,18 +61,21 @@ function JuliaRL.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng=Random.GLOBA
 end
 
 function update_params!(agent::DQNAgent, e)
-    
-    update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
 
-    if agent.target_network_counter == 1
-        agent.target_network_counter = agent.tn_counter_init
-        agent.target_network = mapleaves(
-            Flux.Tracker.data,
-            deepcopy(agent.model))
+    if agent.tn_counter_init > 0
+        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
+
+        if agent.target_network_counter == 1
+            agent.target_network_counter = agent.tn_counter_init
+            agent.target_network = mapleaves(
+                Flux.Tracker.data,
+                deepcopy(agent.model))
+        else
+            agent.target_network_counter -= 1
+        end
     else
-        agent.target_network_counter -= 1
+        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t)
     end
-
     return nothing
     
 end

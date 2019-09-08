@@ -62,9 +62,7 @@ function JuliaRL.reset!(env::MountainCar,
 end
 
 
-function JuliaRL.environment_step!(env::MountainCar,
-                                   action;
-                                   rng=Random.GLOBAL_RNG, kwargs...)
+function JuliaRL.environment_step!(env::MountainCar, action, rng::AbstractRNG; kwargs...)
     
     @boundscheck valid_action(env, action)
     env.vel =

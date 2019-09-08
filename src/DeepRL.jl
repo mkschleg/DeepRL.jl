@@ -12,7 +12,7 @@ export ExperienceReplay,
 include("replay.jl")
 
 
-export MountainCar
+export MountainCar, Atari
 include("env.jl")
 
 export ϵGreedy, sample
