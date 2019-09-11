@@ -13,7 +13,7 @@ An interface adapted from https://github.com/JuliaML/AtariAlgos.jl/blob/master/s
 implemented by https://github.com/JuliaReinforcementLearning/ArcadeLearningEnvironment.jl. Because we want to have
 some better fidelity with settings, reimplementing is easier than writting a wrapper around a wrapper around a wrapper...
 """
-mutable struct Atari <: JuliaRL.AbstractEnvironment
+mutable struct Atari{S} <: JuliaRL.AbstractEnvironment
     ale::ALE.ALEPtr
     lives::Int
     died::Bool
@@ -23,23 +23,24 @@ mutable struct Atari <: JuliaRL.AbstractEnvironment
     width::Int
     height::Int
     rawscreen::Vector{Cuchar}  # raw screen data from the most recent frame
-    state::Vector{Float64}  # the game state... raw screen data converted to Float64
+    state::Array{S, 3}  # the game state... raw screen data converted to Float64
     screen::Matrix{RGB{Float64}}
 
-    function Atari(gamename::AbstractString)
+    function Atari{S}(gamename::AbstractString) where {S<:Number}
         ale = ALE.ALE_new()
         ALE.loadROM(ale, gamename)
         w = ALE.getScreenWidth(ale)
         h = ALE.getScreenHeight(ale)
         rawscreen = Array{Cuchar}(undef, w * h * 3)
-        state = similar(rawscreen, Float64)
         screen = fill(RGB{Float64}(0,0,0), h, w)
-        new(ale, 0, false, 0., 0., 0, w, h, rawscreen, state, screen)
+        state = fill(zero(S), h, w, 3)
+        new{S}(ale, 0, false, 0., 0., 0, w, h, rawscreen, state, screen)
     end
 end
+Atari(gamename::AbstractString) = Atari{Float32}(gamename)
 
 function Base.close(env::Atari)
-    env.state = typeof(env.state)()
+    env.state = typeof(env.state)(undef, 0, 0, 0)
     ALE.ALE_del(env.ale)
 end
 
@@ -48,10 +49,8 @@ valid_action(env::Atari, action) = action in JuliaRL.get_actions(env)
 
 
 function update_screen(env::Atari)
-    idx = 1
     for i in 1:env.height, j in 1:env.width
-        env.screen[i,j] = RGB{Float64}(env.state[idx], env.state[idx+1], env.state[idx+2])
-        idx += 3
+        env.screen[i,j] = RGB{Float64}(env.state[i, j, 1], env.state[i, j, 2], env.state[i, j, 3])
     end
     env.screen
 end
@@ -70,10 +69,15 @@ end
 function update_state(env::Atari)
     # get the raw screen data
     ALE.getScreenRGB!(env.ale, env.rawscreen)
-    for i in eachindex(env.rawscreen)
-        env.state[i] = env.rawscreen[i] / 256
+    idx = 1
+    for i in 1:env.height, j in 1:env.width
+        env.state[i,j,1] = env.rawscreen[idx] // 256
+        env.state[i,j,2] = env.rawscreen[idx+1] // 256
+        env.state[i,j,3] = env.rawscreen[idx+2] // 256
+        idx += 3
     end
     env.lives = ALE.lives(env.ale)
+    return
 end
 
 # Set seed default to 0
@@ -86,8 +90,6 @@ function JuliaRL.reset!(env::Atari; seed::Int64=0, kwargs...)
     env.score = 0
     env.nframes = 0
     update_state(env)
-
-    return
 end
 
 function JuliaRL.environment_step!(env::Atari, action; kwargs...)

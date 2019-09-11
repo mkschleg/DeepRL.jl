@@ -25,4 +25,6 @@ export DQNAgent
 include("agent.jl")
 
 
+include("utils.jl")
+
 end # module
