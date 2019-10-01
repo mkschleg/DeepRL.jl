@@ -22,32 +22,20 @@ function construct_agent(s, num_actions)
     batch_size=32
     tn_counter_init=50
 
-    model = Chain(Dense(length(s), 128, Flux.relu; initW=Flux.glorot_uniform),
-                  Dense(128, 128, Flux.relu; initW=Flux.glorot_uniform),
-                  Dense(128, 32, Flux.relu; initW=Flux.glorot_uniform),
-                  Dense(32, num_actions; initW=Flux.glorot_uniform))
+    model = Chain()
 
     target_network = mapleaves(Flux.Tracker.data, deepcopy(model)::typeof(model))
 
-    return DQNAgent(model,
-                    target_network,
-                    ADAM(0.001),
-                    QLearning(γ),
-                    ϵGreedy(ϵ),
-                    1000000,
-                    γ,
-                    batch_size,
-                    tn_counter_init,
-                    s)
-end
-
-
-
-function plot_layers(agent::DQNAgent, data_range)
-
-
-    y = maximum.(Flux.data.(agent.model.(data_range)))
-
+    return ImageDQNAgent(model,
+                         target_network,
+                         ADAM(0.001),
+                         QLearning(γ),
+                         ϵGreedy(ϵ),
+                         1000000,
+                         γ,
+                         batch_size,
+                         tn_counter_init,
+                         s)
 end
 
 
@@ -110,4 +98,3 @@ function main_experiment(seed, num_episodes)
 end
 
 end
-

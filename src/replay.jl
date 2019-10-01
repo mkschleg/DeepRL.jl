@@ -3,8 +3,13 @@ include("sumtree.jl")
 
 import Random
 import Base.getindex, Base.size
+import DataStructures
 
-mutable struct ExperienceReplay{CB}
+abstract type AbstractReplay end
+
+abstract type AbstractWeightedReplay <: AbstractReplay end
+
+mutable struct ExperienceReplay{CB<:CircularBuffer} <: AbstractReplay
     buffer::CB
 end
 
@@ -12,7 +17,8 @@ ExperienceReplay(size, types, column_names) =
     ExperienceReplay(CircularBuffer(size, types, column_names))
 
 size(er::ExperienceReplay) = size(er.buffer)
-getindex(er::ExperienceReplay, idx) = getindex(er.buffer, idx)
+@forward ExperienceReplay.buffer getindex
+
 add!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
 
 function sample(er::ExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
@@ -20,8 +26,31 @@ function sample(er::ExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     return getrow(er.buffer, idx)
 end
 
+mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
+    buffer::CB
+    column_names::T
+end
 
-mutable struct WeightedExperienceReplay{CB}
+OnlineReplay(size, types, column_names) =
+    OnlineReplay(DataStructures.CircularBuffer{Tuple{types...}}(size), tuple(column_names...))
+
+size(er::OnlineReplay) = size(er.buffer)
+@forward OnlineReplay.buffer Base.lastindex
+function getindex(er::OnlineReplay, idx)
+    data = er.buffer[idx]
+    NamedTuple{er.column_names}((getindex.(data, i) for i in 1:length(er.column_names)))
+end
+isfull(er::OnlineReplay) = DataStructures.isfull(er.buffer)
+add!(er::OnlineReplay, experience) = push!(er.buffer, experience)
+
+function sample(er::OnlineReplay, batch_size; rng=Random.GLOBAL_RNG)
+    @assert batch_size <= size(er.buffer)[1]
+    return er[(end-batch_size+1):end]
+end
+
+
+
+mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedReplay
     buffer::CB
     sumtree::SumTree
 end
@@ -31,7 +60,8 @@ WeightedExperienceReplay(size, types, column_names) =
         SumTree{Int64}(size))
 
 size(er::WeightedExperienceReplay) = size(er.buffer)
-getindex(er::WeightedExperienceReplay, idx) = getindex(er.buffer, idx)
+@forward WeightedExperienceReplay.buffer getindex
+
 function add!(er::WeightedExperienceReplay, experience, weight)
     idx = add!(er.buffer, experience)
     add!(er.sumtree, weight, idx)

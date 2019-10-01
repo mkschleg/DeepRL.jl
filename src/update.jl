@@ -9,7 +9,7 @@ function update!(model,
                  a_t::Array{<:Integer, 1},
                  s_tp1::Array{Array{AF, 1}, 1},
                  r::Array{AF, 1},
-                 terminal::Array{Bool, 1},
+                 terminal,
                  target_model) where {AF<:AbstractFloat, T<:LearningUpdate}
     update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal, target_model)
 end
@@ -21,7 +21,7 @@ function update!(model,
                  a_t::Array{<:Integer, 1},
                  s_tp1::Array{Array{AF, 1}, 1},
                  r::Array{AF, 1},
-                 terminal::Array{Bool, 1}) where {AF<:AbstractFloat, T<:LearningUpdate}
+                 terminal) where {AF<:AbstractFloat, T<:LearningUpdate}
     update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal)
 end
 
@@ -39,7 +39,7 @@ function update!(model, lu::QLearning, opt,
                  a_t::Array{<:Integer, 1},
                  s_tp1::Array{<:AbstractFloat, 2},
                  r::Array{<:AbstractFloat, 1},
-                 terminal::Array{Bool, 1},
+                 terminal,
                  target_model)
 
     ps = params(model)
@@ -61,7 +61,7 @@ function update!(model, lu::QLearning, opt,
                  a_t::Array{<:Integer, 1},
                  s_tp1::Array{<:AbstractFloat, 2},
                  r::Array{<:AbstractFloat, 1},
-                 terminal::Array{Bool, 1})
+                 terminal)
     
     ps = params(model)
     
@@ -84,7 +84,7 @@ function update!(model, lu::DoubleQLearning, opt,
                  a_t::Array{<:Integer, 1},
                  s_tp1::Array{<:AbstractFloat, 2},
                  r::Array{<:AbstractFloat, 1},
-                 terminal::Array{Bool, 1})
+                 terminal)
 
     ps = params(model)
     

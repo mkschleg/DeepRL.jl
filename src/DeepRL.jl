@@ -2,15 +2,15 @@ module DeepRL
 
 greet() = print("Hello Deep Reinforcement Learning!")
 
-using Reexport
+using Reexport, Lazy
 @reexport using JuliaRL
 
 export ExperienceReplay,
-    WeightedExperienceReplay,
+    WeightedExperienceReplay, OnlineReplay,
     size, getindex, add!, sample
 
 include("replay.jl")
-
+include("ImageBuffer.jl")
 
 export MountainCar, Atari
 include("env.jl")
@@ -21,7 +21,7 @@ include("policy.jl")
 export QLearning, DoubleQLearning
 include("update.jl")
 
-export DQNAgent
+export DQNAgent, OnlineDQNAgent
 include("agent.jl")
 
 

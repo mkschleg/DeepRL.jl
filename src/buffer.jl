@@ -5,7 +5,7 @@ import Base.size, Base.getindex
 """
 CircularBuffer
 
-Maintains a buffer of fixed size w/o reallocating and deallocating memory through a circular queue data struct.
+    Maintains a buffer of fixed size w/o reallocating and deallocating memory through a circular queue data struct.
 """
 mutable struct CircularBuffer{TBL}
     """The structure the data is stored"""
@@ -23,10 +23,8 @@ mutable struct CircularBuffer{TBL}
 end
 
 function CircularBuffer(size, types, column_names)
-
     d = Tuple(Array{T, 1}(undef, size) for T in types)
     table = Table(NamedTuple{Symbol.(column_names)}(d))
-        
     CircularBuffer(table, 1, size, false, collect(types), collect(column_names))
 end
 
@@ -37,10 +35,20 @@ end
 
     returns row of data of added data
 """
-function add!(buffer::CircularBuffer, data)
+function add!(buffer::CB, data) where {CB<:CircularBuffer}
     ret = buffer._current_row
-    for (idx, dat) in enumerate(data)
-        getproperty(buffer._table, buffer._names[idx])[buffer._current_row] = copy(dat)
+    if buffer._full
+        for (idx, dat) in enumerate(data)
+            if buffer._data_types[idx]<:AbstractArray
+                getproperty(buffer._table, buffer._names[idx])[buffer._current_row] .= dat
+            else
+                getproperty(buffer._table, buffer._names[idx])[buffer._current_row] = dat
+            end
+        end
+    else
+        for (idx, dat) in enumerate(data)
+            getproperty(buffer._table, buffer._names[idx])[buffer._current_row] = copy(dat)
+        end        
     end
     buffer._current_row += 1
     if buffer._current_row > buffer._capacity
@@ -71,8 +79,8 @@ end
     returns the max number of elements the buffer can store.
 """
 capacity(buffer::CircularBuffer) = buffer._capacity
-# getindex(buffer::CircularBuffer, idx) = getindex(buffer._table, idx)
 getrow(buffer::CircularBuffer, idx) = buffer._table[idx]
+@forward CircularBuffer._table getindex
 
 function Base.show(io::IO, buffer::CircularBuffer)
     if !buffer._full

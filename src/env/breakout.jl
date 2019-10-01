@@ -15,6 +15,7 @@ mutable struct Atari <: JuliaRL.AbstractEnvironment
     died::Bool
     reward::Float64
     score::Float64
+    frame_skip::Int64
     nframes::Int
     width::Int
     height::Int
@@ -22,7 +23,8 @@ mutable struct Atari <: JuliaRL.AbstractEnvironment
     state::Vector{Float64}  # the game state... raw screen data converted to Float64
     screen::Matrix{RGB{Float64}}
 
-    function Atari(gamename::AbstractString)
+    function Atari(gamename::AbstractString; frame_skip=4)
+        @assert frame_skip >= 1
         ale = ALE.ALE_new()
         ALE.loadROM(ale, gamename)
         w = ALE.getScreenWidth(ale)
@@ -30,7 +32,7 @@ mutable struct Atari <: JuliaRL.AbstractEnvironment
         rawscreen = Array{Cuchar}(undef, w * h * 3)
         state = similar(rawscreen, Float64)
         screen = fill(RGB{Float64}(0,0,0), h, w)
-        new(ale, 0, false, 0., 0., 0, w, h, rawscreen, state, screen)
+        new(ale, 0, false, 0., 0., frame_skip, 0, w, h, rawscreen, state, screen)
     end
 end
 
@@ -73,6 +75,10 @@ function update_state(game::Atari)
     game.state
 end
 
+function set_seed!(env::Atari, seed=0)
+    ALE.setInt(env.ale, seed)
+end
+
 # Set seed default to 0
 function JuliaRL.reset!(env::Atari; seed::Int64=0, kwargs...)
     ALE.reset_game(env.ale)
@@ -89,8 +95,13 @@ function JuliaRL.environment_step!(env::Atari,
                                    action;
                                    rng=Random.GLOBAL_RNG, kwargs...)
     # act and get the reward and new state
-    game.reward = ALE.act(game.ale, a)
-    game.score += game.reward
+    for 1:env.frame_skip
+        game.reward = ALE.act(game.ale, a)
+        game.score += game.reward
+        if JuliaRL.is_terminal(env)
+            break
+        end
+    end
     update_state(game)
     return
 end
