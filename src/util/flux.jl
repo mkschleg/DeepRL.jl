@@ -25,5 +25,17 @@ function get_activations(model::M, data) where {M<:Flux.Chain}
 end
 
 
+struct ConcatStreams{M1, M2}
+    m1::M1
+    m2::M2
+end
+
+Flux.@treelike ConcatStreams
+(l::ConcatStreams)(x) = vcat(l.m1(x), l.m2(x))
+
+function Base.show(io::IO, l::ConcatStreams)
+  print(io, "ConcatStreams(", string(l.m1), ", ", string(l.m2), ")")
+end
+
 
 end

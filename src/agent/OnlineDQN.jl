@@ -34,7 +34,7 @@ OnlineDQNAgent(model, target_network, opt, lu, ap, γ, batch_size, tn_counter_in
              s, 0)
 
 
-function JuliaRL.start!(agent::OnlineDQNAgent, env_s_tp1, rng::AbstractRNG; kwargs...)
+function RLCore.start!(agent::OnlineDQNAgent, env_s_tp1, rng::AbstractRNG; kwargs...)
     # Start an Episode
     agent.action = sample(agent.ap,
                           agent.model(env_s_tp1),
@@ -44,7 +44,7 @@ function JuliaRL.start!(agent::OnlineDQNAgent, env_s_tp1, rng::AbstractRNG; kwar
     return agent.action
 end
 
-function JuliaRL.step!(agent::OnlineDQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
+function RLCore.step!(agent::OnlineDQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
     
     add!(agent.buffer, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
 

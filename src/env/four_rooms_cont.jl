@@ -50,7 +50,7 @@ end
 """
     FourRoomsCont
 
-    Four Rooms environment using JuliaRL abstract environment.
+    Four Rooms environment using RLCore abstract environment.
     - state: [y, x]
 
 """
@@ -81,9 +81,9 @@ function FourRoomsCont(size::Int, wall_list::Array{CartesianIndex{2}}, max_actio
     FourRoomsCont([0.0,0.0], walls, max_noise, drift_noise, false)
 end
 
-JuliaRL.is_terminal(env::FourRoomsCont) = false
-JuliaRL.get_reward(env::FourRoomsCont) = 0
-JuliaRL.get_state(env::FourRoomsCont) = (env.normalized ? env.state./size(env) : env.state, env.collision)
+RLCore.is_terminal(env::FourRoomsCont) = false
+RLCore.get_reward(env::FourRoomsCont) = 0
+RLCore.get_state(env::FourRoomsCont) = (env.normalized ? env.state./size(env) : env.state, env.collision)
 project(env::FourRoomsCont, state) = [Int64(floor(state[1])) + 1, Int64(floor(state[2])) + 1]
 project(env::FourRoomsCont, state, loc) = begin; loc[1] = Int64(floor(state[1]) + 1); loc[2] = Int64(floor(state[2]) + 1); end;
 function is_wall(env::FourRoomsCont, state::Array{Float64, 1})
@@ -109,7 +109,7 @@ end
 Base.size(env::FourRoomsCont) = size(env.walls)
 num_actions(env::FourRoomsCont) = 4
 get_states(env::FourRoomsCont) = findall(x->x==false, env.walls)
-JuliaRL.get_actions(env::FourRoomsCont) = FourRoomsContParams.ACTIONS
+RLCore.get_actions(env::FourRoomsCont) = FourRoomsContParams.ACTIONS
 
 
 function handle_collision(env::FourRoomsCont, state, action)
@@ -207,7 +207,7 @@ function which_room(env::FourRoomsCont, state)
     return room
 end
 
-function JuliaRL.reset!(env::FourRoomsCont; rng=Random.GLOBAL_RNG, kwargs...)
+function RLCore.reset!(env::FourRoomsCont; rng=Random.GLOBAL_RNG, kwargs...)
     state = random_state(env, rng)
 
     while is_wall(env, state)
@@ -231,7 +231,7 @@ function mini_step(env::FourRoomsCont, state, step, action)
     return new_state, collision
 end
 
-function JuliaRL.environment_step!(env::FourRoomsCont, action; rng=Random.GLOBAL_RNG, kwargs...)
+function RLCore.environment_step!(env::FourRoomsCont, action; rng=Random.GLOBAL_RNG, kwargs...)
 
 
     frp = FourRoomsContParams

@@ -20,7 +20,7 @@ ContMountainCar(rng::AbstractRNG, normalized::Bool=false)
     The mountain car environment.
 
 """
-mutable struct ContMountainCar <: JuliaRL.AbstractEnvironment
+mutable struct ContMountainCar <: RLCore.AbstractEnvironment
     pos::Float64
     vel::Float64
     actions::Interval{:closed, :closed, Float64}
@@ -34,18 +34,18 @@ mutable struct ContMountainCar <: JuliaRL.AbstractEnvironment
 end
 
 
-JuliaRL.get_actions(env::ContMountainCar) = env.actions
+RLCore.get_actions(env::ContMountainCar) = env.actions
 valid_action(env::ContMountainCar, action) = action ∈ env.actions
 
 
-function JuliaRL.reset!(env::ContMountainCar, rng::AbstractRNG; kwargs...)
+function RLCore.reset!(env::ContMountainCar, rng::AbstractRNG; kwargs...)
     env.pos = (rand(rng)*(ContMountainCarConst.pos_initial_range[2]
                           - ContMountainCarConst.pos_initial_range[1])
                + ContMountainCarConst.pos_initial_range[1])
     env.vel = 0.0
 end
 
-function JuliaRL.reset!(env::ContMountainCar,
+function RLCore.reset!(env::ContMountainCar,
                         start_state::T;
                         kwargs...) where {T<:AbstractArray}
     if env.normalized
@@ -60,7 +60,7 @@ function JuliaRL.reset!(env::ContMountainCar,
 end
 
 
-function JuliaRL.environment_step!(env::ContMountainCar,
+function RLCore.environment_step!(env::ContMountainCar,
                                    action;
                                    rng=Random.GLOBAL_RNG, kwargs...)
     
@@ -74,7 +74,7 @@ function JuliaRL.environment_step!(env::ContMountainCar,
 end
 
 
-function JuliaRL.get_reward(env::ContMountainCar) # -> determines if the agent_state is terminal
+function RLCore.get_reward(env::ContMountainCar) # -> determines if the agent_state is terminal
     if env.pos >= ContMountainCarConst.pos_limit[2]
         return 0
     end
@@ -82,12 +82,12 @@ function JuliaRL.get_reward(env::ContMountainCar) # -> determines if the agent_s
 end
 
 
-function JuliaRL.is_terminal(env::ContMountainCar) # -> determines if the agent_state is terminal
+function RLCore.is_terminal(env::ContMountainCar) # -> determines if the agent_state is terminal
     return env.pos >= ContMountainCarConst.pos_limit[2]
 end
 
 
-function JuliaRL.get_state(env::ContMountainCar)
+function RLCore.get_state(env::ContMountainCar)
     if env.normalized
         return get_normalized_state(env)
     else

@@ -1,4 +1,4 @@
-import JuliaRL
+import RLCore
 
 using Plots
 
@@ -13,7 +13,7 @@ An interface adapted from https://github.com/JuliaML/AtariAlgos.jl/blob/master/s
 implemented by https://github.com/JuliaReinforcementLearning/ArcadeLearningEnvironment.jl. Because we want to have
 some better fidelity with settings, reimplementing is easier than writting a wrapper around a wrapper around a wrapper...
 """
-mutable struct Atari{S} <: JuliaRL.AbstractEnvironment
+mutable struct Atari{S} <: RLCore.AbstractEnvironment
     ale::ALE.ALEPtr
     lives::Int
     died::Bool
@@ -44,8 +44,8 @@ function Base.close(env::Atari)
     ALE.ALE_del(env.ale)
 end
 
-JuliaRL.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
-valid_action(env::Atari, action) = action in JuliaRL.get_actions(env)
+RLCore.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
+valid_action(env::Atari, action) = action in RLCore.get_actions(env)
 
 
 function update_screen(env::Atari)
@@ -81,7 +81,7 @@ function update_state(env::Atari)
 end
 
 # Set seed default to 0
-function JuliaRL.reset!(env::Atari; seed::Int64=0, kwargs...)
+function RLCore.reset!(env::Atari; seed::Int64=0, kwargs...)
     ALE.reset_game(env.ale)
     ALE.setInt(env.ale, "random_seed", seed)
     env.lives = 0
@@ -92,7 +92,7 @@ function JuliaRL.reset!(env::Atari; seed::Int64=0, kwargs...)
     update_state(env)
 end
 
-function JuliaRL.environment_step!(env::Atari, action; kwargs...)
+function RLCore.environment_step!(env::Atari, action; kwargs...)
     # act and get the reward and new state
     env.reward = ALE.act(env.ale, action)
     env.score += env.reward
@@ -100,6 +100,6 @@ function JuliaRL.environment_step!(env::Atari, action; kwargs...)
     return
 end
 
-JuliaRL.get_reward(env::Atari) = env.reward 
-JuliaRL.is_terminal(env::Atari) = ALE.game_over(env.ale)
-JuliaRL.get_state(env::Atari) = env.state
+RLCore.get_reward(env::Atari) = env.reward 
+RLCore.is_terminal(env::Atari) = ALE.game_over(env.ale)
+RLCore.get_state(env::Atari) = env.state

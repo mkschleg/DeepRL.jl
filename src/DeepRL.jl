@@ -3,7 +3,7 @@ module DeepRL
 greet() = print("Hello Deep Reinforcement Learning!")
 
 using Reexport, Lazy
-@reexport using JuliaRL
+@reexport using RLCore
 
 export ExperienceReplay,
     WeightedExperienceReplay, OnlineReplay,
@@ -18,11 +18,12 @@ include("env.jl")
 export ϵGreedy, sample
 include("policy.jl")
 
-export QLearning, DoubleQLearning
+export QLearning, DoubleQLearning, AuxQLearning, TDLearning
 include("update.jl")
 
-export DQNAgent, OnlineDQNAgent
+export DQNAgent, OnlineDQNAgent, AT_DQNAgent
 include("agent.jl")
+
 
 
 include("utils.jl")

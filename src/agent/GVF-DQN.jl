@@ -1,8 +1,9 @@
 
+
 using Flux
 using Random
 
-mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractAgent
+mutable struct GVF_DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractAgent
     model::M
     target_network::TN
     opt::O
@@ -17,21 +18,21 @@ mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ERP} <: Abstr
     prev_s::Φ
 end
 
-DQNAgent(model, target_network, opt, lu, ap, size_buffer, γ, batch_size, tn_counter_init, s) =
-    DQNAgent(model,
-             target_network,
-             opt,
-             lu,
-             ap,
-             ExperienceReplay(100000,
-                              (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
-                              (:s, :a, :sp, :r, :t)),
-             γ,
-             batch_size,
-             tn_counter_init,
-             tn_counter_init,
-             0,
-             s)
+GVF_DQNAgent(model, target_network, opt, lu, ap, size_buffer, γ, batch_size, tn_counter_init, s) =
+    GVF_DQNAgent(model,
+                 target_network,
+                 opt,
+                 lu,
+                 ap,
+                 ExperienceReplay(100000,
+                                  (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
+                                  (:s, :a, :sp, :r, :t)),
+                 γ,
+                 batch_size,
+                 tn_counter_init,
+                 tn_counter_init,
+                 0,
+                 s)
 
 
 function RLCore.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG; kwargs...)
@@ -44,7 +45,7 @@ end
 
 function RLCore.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
     
-    add!(agent.er, (copy(Float32.(agent.prev_s)), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
+    add!(agent.er, (Float32.(agent.prev_s), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
     
     if size(agent.er)[1] > 1000
         e = sample(agent.er, agent.batch_size; rng=rng)
@@ -79,6 +80,11 @@ function update_params!(agent::DQNAgent, e)
     return nothing
     
 end
+
+
+
+
+
 
 
 

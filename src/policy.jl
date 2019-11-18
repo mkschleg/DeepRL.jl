@@ -13,3 +13,11 @@ function sample(ap::ϵGreedy, values, rng)
         return rand(rng, 1:length(values))
     end
 end
+
+function get_prob(ap::ϵGreedy, values, action)
+    if action == findmax(values)[2]
+        return 1 - ap.ϵ + (ap.ϵ / length(values))
+    else
+        return ap.ϵ / length(values)
+    end
+end
