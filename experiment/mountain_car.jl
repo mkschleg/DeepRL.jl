@@ -27,7 +27,7 @@ function construct_agent(s, num_actions)
                   Dense(128, 32, Flux.relu; initW=Flux.glorot_uniform),
                   Dense(32, num_actions; initW=Flux.glorot_uniform))
 
-    target_network = mapleaves(Flux.Tracker.data, deepcopy(model)::typeof(model))
+    target_network = deepcopy(model)
 
     return DQNAgent(model,
                     target_network,

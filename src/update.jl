@@ -1,4 +1,11 @@
 
+using Flux
+
+
+get_cart_idx(a, l) = [CartesianIndex(a[i], i) for i in 1:l]
+Flux.Zygote.@nograd get_cart_idx
+
+
 abstract type AbstractLearningUpdate end
 
 
@@ -14,24 +21,6 @@ function update!(model,
     update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal, args...)
 end
 
-# function update!(model,
-#                  lu::T,
-#                  opt,
-#                  s_t::Array{Array{AF, 1}, 1},
-#                  a_t::Array{<:Integer, 1},
-#                  s_tp1::Array{Array{AF, 1}, 1},
-#                  r::Array{AF, 1},
-#                  terminal) where {AF<:AbstractFloat, T<:AbstractLearningUpdate}
-#     update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal)
-# end
-
-
-# function update!(model::GVFNetwork,
-#                  lu, opt, s_t, a_t, s_tp1, r, terminal)
-#     update!(model.gvf_model, lu[1], opt, model.horde, s_t, a_t, s_tp1, r, terminal)
-#     update!(model, lu[2], opt, s_t, a_t, s_tp1, r, terminal)
-# end
-
 abstract type AbstractQLearning <: AbstractLearningUpdate end
 
 
@@ -41,7 +30,8 @@ end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
-    action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    action_idx = get_cart_idx(a_t, length(terminal))
 
     q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
     
@@ -52,7 +42,8 @@ end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
     γ = lu.γ.*(1 .- terminal)
-    action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    action_idx = get_cart_idx(a_t, length(terminal))
 
     q_tp1 = Flux.Tracker.data(maximum(model(s_tp1); dims=1)[1,:])
 
@@ -68,8 +59,9 @@ end
 
 function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
-    action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
-
+    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    action_idx = get_cart_idx(a_t, length(terminal))
+    
     q̃_tp1 = Flux.data(model(s_tp1))
     q̃_tp1_argmax = findmax(q̃_tp1; dims=1)
     action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
@@ -83,8 +75,9 @@ end
 
 function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
     γ = lu.γ.*(1 .- terminal)
-    action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
-
+    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+    action_idx = get_cart_idx(a_t, length(terminal))
+    
     q̃_tp1 = Flux.data(model(s_tp1))
     q̃_tp1_argmax = findmax(q̃_tp1; dims=1)
     action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
@@ -96,6 +89,9 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
     return Flux.mse(target, q_t)
 end
 
+
+
+
 function update!(model, lu::LU, opt,
                  s_t::Array{<:AbstractFloat, 2},
                  a_t::Array{<:Integer, 1},
@@ -105,8 +101,21 @@ function update!(model, lu::LU, opt,
                  target_model) where {LU<:AbstractQLearning}
 
     ps = params(model)
-    gs = Flux.gradient(ps) do
-        loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+    # @show loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+    # println("Hello world")
+    # gs = gradient(()->loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model), ps)
+    gs = gradient(ps) do
+        # loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+        γ = lu.γ.*(1 .- terminal)
+        # Flux.Zygote.@nograd action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+        action_idx = get_cart_idx(a_t, length(terminal))
+        q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
+        
+        target = (r .+ γ.*q_tp1)
+        # target = rand(length(terminal))
+        q_t = model(s_t)[action_idx]
+        Flux.mse(target, q_t)
+        # q_t .- rand(size(q_t)...)
     end
     Flux.Optimise.update!(opt, ps, gs)
 end

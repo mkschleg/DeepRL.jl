@@ -67,9 +67,7 @@ function update_params!(agent::DQNAgent, e)
 
         if agent.target_network_counter == 1
             agent.target_network_counter = agent.tn_counter_init
-            agent.target_network = mapleaves(
-                Flux.Tracker.data,
-                deepcopy(agent.model))
+            agent.target_network = deepcopy(agent.model)
         else
             agent.target_network_counter -= 1
         end

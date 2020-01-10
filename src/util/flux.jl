@@ -2,10 +2,7 @@
 module FluxUtils
 
 using Flux
-using Flux.Tracker
 using Random
-# import Reproduce: ArgParseSettings, @add_arg_table
-
 
 
 glorot_uniform(rng::Random.AbstractRNG, T::Type, dims...) = (rand(rng, T, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
@@ -22,6 +19,10 @@ function get_activations(model::M, data) where {M<:Flux.Chain}
         push!(activations, layer(activations[idx]))
     end
     return activations
+end
+
+function copy_weights(src::M, dest::M) where {M}
+    
 end
 
 
