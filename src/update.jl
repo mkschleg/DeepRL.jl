@@ -32,12 +32,12 @@ function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
     # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
     action_idx = get_cart_idx(a_t, length(terminal))
-
     q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
-    
-    target = (r .+ γ.*q_tp1)
+
+    # target = 
     q_t = model(s_t)[action_idx]
-    return Flux.mse(target, q_t)
+    return Flux.mse(q_t,
+                    (r .+ γ.*q_tp1))
 end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
@@ -101,21 +101,8 @@ function update!(model, lu::LU, opt,
                  target_model) where {LU<:AbstractQLearning}
 
     ps = params(model)
-    # @show loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
-    # println("Hello world")
-    # gs = gradient(()->loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model), ps)
     gs = gradient(ps) do
-        # loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
-        γ = lu.γ.*(1 .- terminal)
-        # Flux.Zygote.@nograd action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
-        action_idx = get_cart_idx(a_t, length(terminal))
-        q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
-        
-        target = (r .+ γ.*q_tp1)
-        # target = rand(length(terminal))
-        q_t = model(s_t)[action_idx]
-        Flux.mse(target, q_t)
-        # q_t .- rand(size(q_t)...)
+        loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
     Flux.Optimise.update!(opt, ps, gs)
 end

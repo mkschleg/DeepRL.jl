@@ -67,7 +67,9 @@ function update_params!(agent::DQNAgent, e)
 
         if agent.target_network_counter == 1
             agent.target_network_counter = agent.tn_counter_init
-            agent.target_network = deepcopy(agent.model)
+            for ps ∈ zip(params(agent.model), params(agent.target_network))
+                ps[2] .= ps[1]
+            end
         else
             agent.target_network_counter -= 1
         end
