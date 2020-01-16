@@ -47,11 +47,14 @@ end
 
 function RLCore.step!(agent::ImageDQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
 
-    cur_s = add!(agent.er, env_s_tp1, agent.action, r, terminal)
-    
-    if size(agent.er)[1] > 50000
+    cur_s = add!(agent.er, env_s_tp1, findfirst((a)->a==agent.action, agent.ap.action_set), r, terminal)
+    # cur_s = add!(agent.er, env_s_tp1, agent.action + 1, r, terminal)
+
+    agent.wait_time_counter -= 1
+    if size(agent.er)[1] > 50
         e = sample(agent.er, agent.batch_size; rng=rng)
         update_params!(agent, e)
+        agent.wait_time_counter = agent.wait_time
     end
 
     
@@ -65,25 +68,22 @@ end
 
 function update_params!(agent::ImageDQNAgent, e)
 
-    agent.wait_time -= 1
-    if agent.wait_time_counter == 0
-        if agent.tn_counter_init > 0 
+    if agent.tn_counter_init > 0 
         
-            update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
-            
-            if agent.target_network_counter == 1
-                agent.target_network_counter = agent.tn_counter_init
-                agent.target_network = deepcopy(mapleaves(
-                    Flux.Tracker.data,
-                    agent.model))
-            else
-                agent.target_network_counter -= 1
-            end
-            agent.wait_time_counter = agent.wait_time
+        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
+        
+        if agent.target_network_counter == 1
+            agent.target_network_counter = agent.tn_counter_init
+            agent.target_network = deepcopy(mapleaves(
+                Flux.Tracker.data,
+                agent.model))
         else
-            update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t)
-                 agent.wait_time_counter = agent.wait_time
+            agent.target_network_counter -= 1
         end
+
+    else
+        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t)
+        agent.wait_time_counter = agent.wait_time
     end
     return nothing
     

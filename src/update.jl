@@ -35,6 +35,7 @@ function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
 
     action_idx = get_cart_idx(a_t, length(terminal))
+    # @show action_idx
     q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
     q_t = model(s_t)[action_idx]
     
@@ -103,6 +104,7 @@ function update!(model, lu::LU, opt,
 
     ps = params(model)
     l = 0.0f0
+    # @show l = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     gs = gradient(ps) do
         l = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
