@@ -39,7 +39,7 @@ function RLCore.start!(agent::ImageDQNAgent, env_s_tp1, rng::AbstractRNG; kwargs
     agent.prev_s = copy(add!(agent.er, env_s_tp1))
     # @show size(view(agent.er.image_buffer, agent.prev_s))
     agent.action = sample(agent.ap,
-                          agent.model(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1))),
+                          agent.model(gpu(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1)))),
                           rng)
 
     return agent.action
@@ -49,7 +49,7 @@ function RLCore.step!(agent::ImageDQNAgent, env_s_tp1, r, terminal, rng::Abstrac
 
     cur_s = add!(agent.er, env_s_tp1, agent.action, r, terminal)
     
-    if size(agent.er)[1] > 50
+    if size(agent.er)[1] > 50000
         e = sample(agent.er, agent.batch_size; rng=rng)
         update_params!(agent, e)
     end
@@ -57,7 +57,7 @@ function RLCore.step!(agent::ImageDQNAgent, env_s_tp1, r, terminal, rng::Abstrac
     
     agent.prev_s .= cur_s
     agent.action = sample(agent.ap,
-                          agent.model(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1))),
+                          agent.model(gpu(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1)))),
                           rng)
 
     return agent.action
