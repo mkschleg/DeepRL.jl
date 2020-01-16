@@ -159,7 +159,7 @@ function main_experiment(seed, num_episodes, tn_counter=50; gif_save_file="my_gi
         dt=0.01,
         desc="Episode:",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
-        barlen=Int64(floor(500/length(front))))
+        barlen=Int64(floor(300/length(front))))
 
     gr()
     if !isdir("plts")
@@ -168,8 +168,7 @@ function main_experiment(seed, num_episodes, tn_counter=50; gif_save_file="my_gi
 
     data_ranges = (0.0:0.005:1.0, 0.0:0.005:1.0)
     anim = HeatmapAnimation(50, false)
-
-    mss = ModelSnapshot(model_snapshot_loc, 10000)
+    mss = ModelSnapshot(model_snapshot_loc, 50)
     
     # with_logger(lg) do
     for e in 1:num_episodes

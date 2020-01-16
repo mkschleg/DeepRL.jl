@@ -92,3 +92,7 @@ function save_umap_over_time(save_loc, snapshot_loc, data_range, skip=1; kwargs.
     end
 
 end
+
+
+function plot_umap_over_time(save_loc, umap_loc, data_range, skip=1; kwargs...)
+end
