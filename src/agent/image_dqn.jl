@@ -47,8 +47,8 @@ end
 
 function RLCore.step!(agent::ImageDQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
 
-    # cur_s = add!(agent.er, env_s_tp1, findfirst((a)->a==agent.action, agent.ap.action_set), r, terminal)
-    cur_s = add!(agent.er, env_s_tp1, agent.action + 1, r, terminal)
+    cur_s = add!(agent.er, env_s_tp1, findfirst((a)->a==agent.action, agent.ap.action_set), r, terminal)
+    # cur_s = add!(agent.er, env_s_tp1, agent.action + 1, r, terminal)
 
     agent.wait_time_counter -= 1
     if size(agent.er)[1] > 50
