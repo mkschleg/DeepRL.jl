@@ -121,7 +121,7 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
     e = 0
     total_steps = 0
     while sum(steps) < num_max_steps
-        tr, s = episode!(env, agent, Random.GLOBAL_RNG, Inf, total_steps, p, save_callback)
+        tr, s = episode!(env, agent, Random.GLOBAL_RNG, num_max_steps, total_steps, p, save_callback)
         push!(total_rews, tr)
         push!(steps, s)
         total_steps += s
