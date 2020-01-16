@@ -22,20 +22,28 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
     action = start!(agent, s_t, rng)
 
     total_rew = 0
+    steps = 0
+    if !(save_callback isa Nothing) && total_steps+steps % 50000 == 0
+        save_callback(agent, total_steps+steps)
+    end
     steps = 1
 
     while !terminal
+
+
         
         s_tp1, rew, terminal = step!(env, action)
 
         action = step!(agent, s_tp1, rew, terminal, rng)
-        total_rew += rew
+
+        if !(save_callback isa Nothing) && total_steps+steps % 100000 == 0
+            save_callback(agent, total_steps+steps)
+        end
+        
+        total_rew += rew        
         steps += 1
         if !(progress_bar isa Nothing)
             next!(progress_bar)
-        end
-        if !(save_callback isa Nothing) && total_steps+steps % 100000 == 0
-            save_callback(agent, total_steps+steps)
         end
 
         if steps == max_steps
