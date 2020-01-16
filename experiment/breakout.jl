@@ -111,7 +111,7 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
         num_max_steps;
-        dt=0.5,
+        dt=0.01,
         desc="Step: ",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
         barlen=Int64(floor(500/length(front))))
