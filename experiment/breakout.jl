@@ -10,6 +10,7 @@ using Plots
 using TensorBoardLogger
 using Logging
 using LinearAlgebra
+using BSON: @save
 
 glorot_uniform(rng::Random.AbstractRNG, dims...) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
 glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
@@ -45,6 +46,10 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
 
     lg=TBLogger("tensorboard_logs/run", min_level=Logging.Info)
 
+    if !isdir("models")
+        mkdir("models")
+    end
+    
     ϵ=0.1
     γ=0.99
     batch_size=32
@@ -66,7 +71,7 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
            Conv((3,3), 64=>64, relu, stride=1),
            flatten,
            Dense(3136, 512, relu),
-           Dense(512, 4))
+           Dense(512, 4)) |> gpu
 
     target_network  = deepcopy(model)
     
@@ -88,17 +93,22 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
         num_max_steps;
-        dt=0.01,
+        dt=0.5,
         desc="Step: ",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
         barlen=Int64(floor(500/length(front))))
 
     # data_range = collect.(collect(Iterators.product(-1.0:0.01:1.0, -1.0:0.01:1.0)))
     # # with_logger(lg) do
+    e = 0
     while sum(steps) < num_max_steps
-        tr, s = episode!(env, agent, Random.GLOBAL_RNG, 50000, p)
+        tr, s = episode!(env, agent, Random.GLOBAL_RNG, Inf, p)
         push!(total_rews, tr)
         push!(steps, s)
+        if e % 100 == 0
+            @save "models/episode_$(e).bson" agent.model s tr
+        end
+        e += 1
     end
 
     # end

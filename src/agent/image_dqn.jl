@@ -39,7 +39,7 @@ function RLCore.start!(agent::ImageDQNAgent, env_s_tp1, rng::AbstractRNG; kwargs
     agent.prev_s = copy(add!(agent.er, env_s_tp1))
     # @show size(view(agent.er.image_buffer, agent.prev_s))
     agent.action = sample(agent.ap,
-                          agent.model(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1))),
+                          agent.model(gpu(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1)))),
                           rng)
 
     return agent.action
@@ -57,7 +57,7 @@ function RLCore.step!(agent::ImageDQNAgent, env_s_tp1, r, terminal, rng::Abstrac
     
     agent.prev_s .= cur_s
     agent.action = sample(agent.ap,
-                          agent.model(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1))),
+                          agent.model(gpu(reshape(getindex(agent.er.image_buffer, agent.prev_s), (84,84,4,1)))),
                           rng)
 
     return agent.action
@@ -69,7 +69,7 @@ function update_params!(agent::ImageDQNAgent, e)
     
     if agent.tn_counter_init > 0 && agent.wait_time_counter == 0
         
-        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
+        update!(agent.model, agent.lu, agent.opt, gpu(e.s), e.a, gpu(e.sp), e.r, e.t, agent.target_network)
 
         if agent.target_network_counter == 1
             agent.target_network_counter = agent.tn_counter_init
