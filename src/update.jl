@@ -1,5 +1,8 @@
 
 using Flux
+using LinearAlgebra
+
+using Flux.Zygote: dropgrad
 
 
 get_cart_idx(a, l) = [CartesianIndex(a[i], i) for i in 1:l]
@@ -30,24 +33,22 @@ end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
-    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+
     action_idx = get_cart_idx(a_t, length(terminal))
     q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
-
-    # target = 
     q_t = model(s_t)[action_idx]
-    return Flux.mse(q_t,
-                    (r .+ γ.*q_tp1))
+    
+    return Flux.mse(q_t, dropgrad(r .+ γ.*q_tp1))
 end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
     γ = lu.γ.*(1 .- terminal)
-    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+
     action_idx = get_cart_idx(a_t, length(terminal))
 
-    q_tp1 = Flux.Tracker.data(maximum(model(s_tp1); dims=1)[1,:])
+    q_ztp1 = maximum(model(s_tp1); dims=1)[1,:]
 
-    target = (r .+ γ.*q_tp1)
+    target = dropgrad(r .+ γ.*q_tp1)
     q_t = model(s_t)[action_idx]
     return Flux.mse(target, q_t)
 end
@@ -59,7 +60,7 @@ end
 
 function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
-    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
+
     action_idx = get_cart_idx(a_t, length(terminal))
     
     q̃_tp1 = Flux.data(model(s_tp1))
@@ -67,7 +68,7 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
     action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
     q_tp1 = target_model(s_tp1)[action_tp1]
 
-    target = (r .+ γ.*q_tp1)
+    target = dropgrad(r .+ γ.*q_tp1)
     q_t = model(s_t)[action_idx]
     
     return Flux.mse(target, q_t)
@@ -81,16 +82,16 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
     q̃_tp1 = Flux.data(model(s_tp1))
     q̃_tp1_argmax = findmax(q̃_tp1; dims=1)
     action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
-    q_tp1 = Flux.data(model(s_tp1)[action_tp1])
+    q_tp1 = dropgrad(model(s_tp1)[action_tp1])
 
-    target = (r .+ γ.*q_tp1)
+    target = dropgrad(r .+ γ.*q_tp1)
     q_t = model(s_t)[action_idx]
     
     return Flux.mse(target, q_t)
 end
 
-
-
+l1(x) = sum(abs.(x))
+l2(x) = sum(x.^2)
 
 function update!(model, lu::LU, opt,
                  s_t::Array{<:AbstractFloat, 2},
@@ -101,10 +102,12 @@ function update!(model, lu::LU, opt,
                  target_model) where {LU<:AbstractQLearning}
 
     ps = params(model)
+    l = 0.0f0
     gs = gradient(ps) do
-        loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+        l = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
     Flux.Optimise.update!(opt, ps, gs)
+    return l
 end
 
 struct TDLearning end
@@ -122,7 +125,7 @@ function loss(lu::TDLearning, model, s_t, a_t, s_tp1, r, terminal, target_model,
     v_t = model(s_t)
     v_tp1 = target_model(s_tp1)
 
-    target = c .+ γ.*v_tp1 # -> Matrix (preds × batch_size)
+    target = dropgrad(c .+ γ.*v_tp1) # -> Matrix (preds × batch_size)
 
     return sum((target .- v_t).^2) * (1 // length(terminal))
 end
@@ -152,15 +155,18 @@ function update!(
     num_gvfs = length(horde)
     ps = params(model)
 
+    ℒ = 0.0f0
+
+    
     gs = Flux.gradient(ps) do
         ℒ_q = loss(lu.q_learning, (x)->model(x)[1:(end-num_gvfs), :], s_t, a_t, s_tp1, r, terminal, (x)->target_model(x)[1:(end-num_gvfs), :])
         # @show ℒ_q
         ℒ_td = loss(lu.td_learning, (x)->model(x)[(end-num_gvfs+1):end, :], s_t, a_t, s_tp1, r, terminal, (x)->target_model(x)[(end-num_gvfs+1):end, :], horde)
         # @show ℒ_td
-        return ℒ_q  + lu.β*ℒ_td
+        ℒ = ℒ_q  + lu.β*ℒ_td
     end
     Flux.Optimise.update!(opt, ps, gs)
-    
+    return ℒ
 end
 
 
@@ -175,7 +181,5 @@ function update!(
     terminal,
     target_model,
     horde::Nothing)
-    
     update!(model, lu.q_learning, opt, s_t, a_t, s_tp1, r, terminal, target_model)
-    
 end

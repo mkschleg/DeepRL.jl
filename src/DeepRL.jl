@@ -21,7 +21,7 @@ include("policy.jl")
 export QLearning, DoubleQLearning, AuxQLearning, TDLearning
 include("update.jl")
 
-export DQNAgent, OnlineDQNAgent, AT_DQNAgent
+export DQNAgent, OnlineDQNAgent, AT_DQNAgent, ImageDQNAgent
 include("agent.jl")
 
 

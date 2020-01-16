@@ -48,8 +48,6 @@ function sample(er::OnlineReplay, batch_size; rng=Random.GLOBAL_RNG)
     return er[(end-batch_size+1):end]
 end
 
-
-
 mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedReplay
     buffer::CB
     sumtree::SumTree
@@ -72,4 +70,8 @@ function sample(er::WeightedExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     batch_idx, batch_priorities, idx = sample(er.sumtree, batch_size; rng=rng)
     return getrow(er.buffer, idx)
 end
+
+
+
+
 
