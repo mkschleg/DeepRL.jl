@@ -85,7 +85,7 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
            Conv((3,3), 64=>64, relu, stride=1),
            flatten,
            Dense(3136, 512, relu),
-           Dense(512, 4)) |> gpu
+           Dense(512, 4))
 
     target_network  = deepcopy(model)
     
