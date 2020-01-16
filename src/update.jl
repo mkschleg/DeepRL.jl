@@ -94,9 +94,9 @@ l1(x) = sum(abs.(x))
 l2(x) = sum(x.^2)
 
 function update!(model, lu::LU, opt,
-                 s_t::Array{<:AbstractFloat, 2},
+                 s_t::Array{<:Number},
                  a_t::Array{<:Integer, 1},
-                 s_tp1::Array{<:AbstractFloat, 2},
+                 s_tp1::Array{<:Number},
                  r::Array{<:AbstractFloat, 1},
                  terminal,
                  target_model) where {LU<:AbstractQLearning}
