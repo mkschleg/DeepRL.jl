@@ -66,8 +66,6 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
             # println("Save Model!")
             save_callback(agent, total_steps+steps)
         end
-    else
-        println("What")
     end
     if !(progress_bar isa Nothing)
         next!(progress_bar)
@@ -90,8 +88,6 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
                 # println("Save Model!")
                 save_callback(agent, total_steps+steps)
             end
-        else
-            println("What?")
         end
         
         total_rew += rew        
