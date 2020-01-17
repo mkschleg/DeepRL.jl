@@ -1,11 +1,12 @@
 
 using Flux
 using LinearAlgebra
+using CuArrays
 
 using Flux.Zygote: dropgrad
 
 
-get_cart_idx(a, l) = [CartesianIndex(a[i], i) for i in 1:l]
+get_cart_idx(a, l) = CartesianIndex.(a, 1:l)
 Flux.Zygote.@nograd get_cart_idx
 
 
@@ -40,6 +41,15 @@ function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     q_t = model(s_t)[action_idx]
     
     return Flux.mse(q_t, dropgrad(r .+ γ.*q_tp1))
+end
+
+function loss(lu::QLearning, model, s_t::CuArray, a_t, s_tp1::CuArray, r, terminal, target_model)
+    
+    action_idx = get_cart_idx(a_t, length(terminal))
+    q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
+    q_t = @view model(s_t)[action_idx]
+    
+    return Flux.mse(q_t, dropgrad(r .+ (one(Int8) .- terminal).*lu.γ.*q_tp1))
 end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
@@ -95,16 +105,15 @@ l1(x) = sum(abs.(x))
 l2(x) = sum(x.^2)
 
 function update!(model, lu::LU, opt,
-                 s_t::Array{<:Number},
-                 a_t::Array{<:Integer, 1},
-                 s_tp1::Array{<:Number},
-                 r::Array{<:AbstractFloat, 1},
+                 s_t::A,
+                 a_t,
+                 s_tp1::A,
+                 r,
                  terminal,
-                 target_model) where {LU<:AbstractQLearning}
+                 target_model) where {LU<:AbstractQLearning, F<:AbstractFloat, A<:AbstractArray{F}}
 
     ps = params(model)
     l = 0.0f0
-    # @show l = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     gs = gradient(ps) do
         l = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end

@@ -1,6 +1,6 @@
 
 using Flux
-# using CuArrays
+using CuArrays
 
 
 mutable struct ImageBuffer{A<:AbstractArray{UInt8}, IM, TPL<:Tuple}
@@ -23,14 +23,24 @@ ImageBuffer(size::Int64, image_manip, img_size) =
         false,
         img_size)
 
+ImageBuffer_gpu(size::Int64, image_manip, img_size) = 
+    ImageBuffer(
+        zeros(Int, size),
+        gpu(zeros(UInt8, img_size..., size)),
+        image_manip,
+        1,
+        size,
+        false,
+        img_size)
+
 function add!(imb::ImageBuffer, img)
 
     ret = imb.cur_idx
-    # if imb.img_buffer isa CuArray
-    #     view(imb, ret) .= imb.image_manip(img) |> CuArray
-    # else
-    view(imb, ret) .= imb.image_manip(img)
-    # end
+    if imb.img_buffer isa CuArray
+        view(imb, ret) .= imb.image_manip(img) |> gpu
+    else
+        view(imb, ret) .= imb.image_manip(img)
+    end
 
     imb.cur_idx += 1
     if imb.cur_idx > imb.capacity
@@ -61,14 +71,22 @@ struct HistImageReplay{ER<:AbstractReplay, IB<:ImageBuffer} <: AbstractImageRepl
     image_buffer::IB
     hist::Int
     cur_state::Array{Int, 1}
+    s::Array{Float32, 4}
+    sp::Array{Float32, 4}
 end
 
-function HistImageReplay(size, img_manip, img_size::Tuple{Int, Int}, hist)
+function HistImageReplay(size, img_manip, img_size::Tuple{Int, Int}, hist, batchsize)
     er = ExperienceReplay(size,
                           (Array{Int, 1}, Int, Array{Int, 1}, Float32, Bool),
                           (:s, :a, :sp, :r, :t))
     imb = ImageBuffer(size, img_manip, img_size)
-    HistImageReplay(er, imb, hist, ones(Int64, hist))
+    HistImageReplay(
+        er,
+        imb,
+        hist,
+        ones(Int64, hist),
+        zeros(Float32, img_size..., hist, batchsize),
+        zeros(Float32, img_size..., hist, batchsize))
 end
 
 
@@ -88,13 +106,24 @@ function add!(er::HistImageReplay, state_prime, action, reward, terminal)
 end
 
 function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
-    idx = rand(rng, 1:size(er), batch_size)
-    rows = getrow(er.exp_replay.buffer, idx)
-    s_imgs = zeros(eltype(er.image_buffer.img_buffer), er.image_buffer.img_size..., er.hist, batch_size)
-    sprime_imgs = zeros(eltype(er.image_buffer.img_buffer), er.image_buffer.img_size..., er.hist, batch_size)
-    @simd for i = 1:batch_size
-        @inbounds s_imgs[:, :, :, i] .= er.image_buffer[rows.s[i]]
-        @inbounds sprime_imgs[ :, :, :, i] .= er.image_buffer[rows.sp[i]]
+    # idx = rand(rng, 1:size(er), batch_size)
+    # rows = getindex(er.exp_replay, idx)
+
+    rows = sample(er.exp_replay, batch_size; rng=rng)
+    for i = 1:batch_size
+        er.s[:, :, :, i] .= er.image_buffer[rows.s[i]] ./ 256f0
+        er.sp[ :, :, :, i] .= er.image_buffer[rows.sp[i]] ./ 256f0
     end
-    return (s=s_imgs, a=rows.a, sp=sprime_imgs, r=rows.r, t=rows.t)
+    # er.s .= cat([er.image_buffer[rows.s[i]]./256f0 for i = 1:batch_size]...;dims=4)
+    # er.sp .= cat([er.image_buffer[rows.sp[i]]./256f0 for i = 1:batch_size]...;dims=4)
+    return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
 end
+
+# function sample(er::HistImageReplay, batch_size, sdest, spdest; rng=Random.GLOBAL_RNG)
+#     rows = sample(er.exp_replay, batch_size; rng=rng)
+#     for i = 1:batch_size
+#         copyto!(sdest[:, :, :, i], er.image_buffer[rows.s[i]] ./ 256f0)
+#         copyto!(spdest[ :, :, :, i], er.image_buffer[rows.sp[i]] ./ 256f0)
+#     end
+#     return (s=sdest, a=rows.a, sp=spdest, r=rows.r, t=rows.t)
+# end
