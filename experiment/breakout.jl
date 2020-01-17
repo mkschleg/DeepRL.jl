@@ -80,12 +80,12 @@ function main_experiment(seed, num_max_steps; gamename="breakout")
     s_prototype = zeros(Float32, 84, 84, hist_length, batch_size)
 
     model = Chain(
-           Conv((8,8), 4=>32, relu, stride=4),
-           Conv((4,4), 32=>64, relu, stride=2),
-           Conv((3,3), 64=>64, relu, stride=1),
-           flatten,
-           Dense(3136, 512, relu),
-           Dense(512, 4)) |> gpu
+        Conv((8,8), 4=>32, relu, stride=4),
+        Conv((4,4), 32=>64, relu, stride=2),
+        Conv((3,3), 64=>64, relu, stride=1),
+        flatten,
+        Dense(3136, 512, relu),
+        Dense(512, 4)) |> gpu
 
     target_network  = deepcopy(model)
     
