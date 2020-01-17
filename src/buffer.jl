@@ -33,7 +33,7 @@ end
 
     Adds data to the buffer, where data is an array of collections of types defined in CircularBuffer._data_types
 
-    returns row of data of added data
+    returns row of data of added d
 """
 function add!(buffer::CB, data) where {CB<:CircularBuffer}
     ret = buffer._current_row
@@ -67,9 +67,9 @@ end
 """
 function size(buffer::CircularBuffer)
     if buffer._full
-        length(buffer._table)
+        length(buffer._table)::Int
     else
-        buffer._current_row-1
+        buffer._current_row-1::Int
     end
 end
 
@@ -78,8 +78,8 @@ end
 
     returns the max number of elements the buffer can store.
 """
-capacity(buffer::CircularBuffer) = buffer._capacity
-getrow(buffer::CircularBuffer, idx) = buffer._table[idx]
+capacity(buffer::CB) where {CB<:CircularBuffer} = buffer._capacity
+getrow(buffer::CB, idx) where {CB<:CircularBuffer} = buffer._table[idx]
 @forward CircularBuffer._table getindex
 
 function Base.show(io::IO, buffer::CircularBuffer)

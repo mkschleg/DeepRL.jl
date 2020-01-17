@@ -21,9 +21,9 @@ size(er::ExperienceReplay) = size(er.buffer)
 
 add!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
 
-function sample(er::ExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
+function sample(er::ExperienceReplay, batch_size::Int; rng=Random.GLOBAL_RNG)
     idx = rand(rng, 1:size(er), batch_size)
-    return getrow(er.buffer, idx)
+    return getindex(er, idx)
 end
 
 mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
