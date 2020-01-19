@@ -80,7 +80,7 @@ function RLCore.step!(agent::ImageDQNAgent,
         r,
         terminal)
 
-
+    
     agent.prev_s_idx .= cur_s
     prev_s = cat(
         getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
@@ -93,34 +93,6 @@ function RLCore.step!(agent::ImageDQNAgent,
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),
                           rng)
-
-    return agent.action
-end
-
-function test_step!(agent::ImageDQNAgent,
-                    env_s_tp1,
-                    r,
-                    terminal,
-                    rng::AbstractRNG;
-                    kwargs...)
-
-    cur_s = add!(
-        agent.er,
-        env_s_tp1,
-        findfirst((a)->a==agent.action,
-                  agent.ap.action_set),
-        r,
-        terminal)
-
-    agent.prev_s_idx .= cur_s
-    prev_s = cat(
-        getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
-        dims=4) |> gpu
-    agent.action = sample(agent.ap,
-                          cpu(agent.model(prev_s)),
-                          rng)
-
-
 
     return agent.action
 end

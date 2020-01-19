@@ -1,4 +1,5 @@
 # DeepRL.jl
+
 A repository with some Deep Reinforcement Learning baselines written in julia using Flux. Currently, this is being used to test the refactored version of JuliaRL.
 
 
@@ -16,5 +17,6 @@ plot(ret[1])
 
 ## Next Steps
 
+- [ ] GPU support
 - [ ] MonteCarlo Rollouts w/ Mountain Car
 - [ ] Policy Gradients w/ continuous mountain car
