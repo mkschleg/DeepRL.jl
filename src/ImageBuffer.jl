@@ -23,16 +23,6 @@ ImageBuffer(size::Int64, image_manip, img_size) =
         false,
         img_size)
 
-ImageBuffer_gpu(size::Int64, image_manip, img_size) = 
-    ImageBuffer(
-        zeros(Int, size),
-        gpu(zeros(UInt8, img_size..., size)),
-        image_manip,
-        1,
-        size,
-        false,
-        img_size)
-
 function add!(imb::ImageBuffer, img)
 
     ret = imb.cur_idx
@@ -64,7 +54,6 @@ Base.view(imb::ImageBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = view(im
 
 
 abstract type AbstractImageReplay <: AbstractReplay end
-
 
 struct HistImageReplay{ER<:AbstractReplay, IB<:ImageBuffer} <: AbstractImageReplay
     exp_replay::ER
