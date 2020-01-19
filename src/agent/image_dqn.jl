@@ -68,7 +68,8 @@ end
 function RLCore.step!(agent::ImageDQNAgent,
                       env_s_tp1,
                       r,
-                      terminal, rng::AbstractRNG;
+                      terminal,
+                      rng::AbstractRNG;
                       kwargs...)
 
     cur_s = add!(
@@ -79,21 +80,16 @@ function RLCore.step!(agent::ImageDQNAgent,
         r,
         terminal)
 
-
-    agent.wait_time_counter -= 1
-    if size(agent.er)[1] > exp_wait_size && agent.wait_time_counter == 0
-        update_params!(
-            agent,
-            sample(agent.er,
-                   agent.batch_size;
-                   rng=rng))
-        agent.wait_time_counter = agent.wait_time
-    end
-
+    
     agent.prev_s_idx .= cur_s
     prev_s = cat(
         getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
         dims=4) |> gpu
+
+
+    update_params!(agent, rng)
+
+
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),
                           rng)
@@ -101,24 +97,36 @@ function RLCore.step!(agent::ImageDQNAgent,
     return agent.action
 end
 
-function update_params!(agent::ImageDQNAgent, e)
+function update_params!(agent::ImageDQNAgent, rng)
+    
 
+    if size(agent.er)[1] > agent.exp_wait_size
+        agent.wait_time_counter -= 1
+        if agent.wait_time_counter <= 0
 
-    s = gpu(e.s)
-    r = gpu(e.r)
-    t = gpu(e.t)
-    sp = gpu(e.sp)
+            e = sample(agent.er,
+                       agent.batch_size;
+                       rng=rng)
+            s = gpu(e.s)
+            r = gpu(e.r)
+            t = gpu(e.t)
+            sp = gpu(e.sp)
+            
+            update!(agent.model,
+                    agent.lu,
+                    agent.opt,
+                    s,
+                    e.a,
+                    sp,
+                    r,
+                    t,
+                    agent.target_network)
 
-    update!(agent.model,
-            agent.lu,
-            agent.opt,
-            s,
-            e.a,
-            sp,
-            r,
-            t,
-            agent.target_network)
-
+            agent.wait_time_counter = agent.wait_time
+        end
+    end
+    
+    # Target network updates 
     if !(agent.target_network isa Nothing)
         if agent.target_network_counter == 1
             agent.target_network_counter = agent.tn_counter_init

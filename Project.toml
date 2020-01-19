@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 ArcadeLearningEnvironment = "b7f77d8d-088d-5e02-8ac0-89aab2acc977"
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+CUDAdrv = "c5f51814-7f29-56b8-a69c-e4d8f6be1fde"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
 CuArrays = "3a865a2d-5b23-5a0f-bc46-62713ec82fae"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

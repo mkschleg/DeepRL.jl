@@ -35,7 +35,7 @@ function construct_agent(env)
            Conv((3,3), 64=>64, relu, stride=1),
            flatten,
            Dense(3136, 512, relu),
-           Dense(512, 4)) |> gpu
+           Dense(512, length(get_actions(env)))) |> gpu
 
     target_network  = deepcopy(model)
     
@@ -44,11 +44,12 @@ function construct_agent(env)
                           image_replay,
                           RMSProp(0.00025, 0.95),
                           QLearning(γ),
-                          ϵGreedy(ϵ, get_actions(env)),
+                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 10000, get_actions(env)),
                           500000,
                           batch_size,
                           tn_counter_init,
-                          update_wait)
+                          update_wait,
+                          10000)
     return agent
 end
 
@@ -119,16 +120,15 @@ function main_experiment(seed, num_max_steps, model_save_loc; gamename="breakout
     env = Atari(gamename; seed=rand(UInt32), frameskip=4)
 
     agent = construct_agent(env)
-    
     total_rews = Array{Int,1}()
     steps = Array{Int,1}()
 
     save_callback(agnt, s) = begin
-        model = agnt.model
+        model = cpu(agnt.model)
         # println("Save")
         @save model_save_loc*"/step_$(s).bson" model
     end
-    
+
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
         num_max_steps;
@@ -152,6 +152,7 @@ function main_experiment(seed, num_max_steps, model_save_loc; gamename="breakout
 
     # end
 
+    save_callback(agent, sum(steps))
     close(env)
     
     return agent.model, total_rews, steps

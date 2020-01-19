@@ -33,6 +33,7 @@ struct QLearning <: AbstractQLearning
 end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
+<<<<<<< HEAD
     
     action_idx = get_cart_idx(a_t, length(terminal))
     q_tp1 = if target_model isa Nothing
