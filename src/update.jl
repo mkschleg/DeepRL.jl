@@ -35,9 +35,9 @@ end
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     γ = lu.γ.*(1 .- terminal)
 
-    action_idx = get_cart_idx(a_t, length(terminal))
+    action_idx = dropgrad(get_cart_idx(a_t, length(terminal)))
     # @show action_idx
-    q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
+    q_tp1 = dropgrad(maximum(target_model(s_tp1); dims=1)[1,:])
     q_t = model(s_t)[action_idx]
     
     return Flux.mse(q_t, dropgrad(r .+ γ.*q_tp1))
@@ -45,7 +45,7 @@ end
 
 function loss(lu::QLearning, model, s_t::CuArray, a_t, s_tp1::CuArray, r, terminal, target_model)
     
-    action_idx = get_cart_idx(a_t, length(terminal))
+    action_idx = dropgrad(get_cart_idx(a_t, length(terminal)))
     q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
     q_t = @view model(s_t)[action_idx]
     
