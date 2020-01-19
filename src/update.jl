@@ -33,35 +33,16 @@ struct QLearning <: AbstractQLearning
 end
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
-    γ = lu.γ.*(1 .- terminal)
-
-    action_idx = dropgrad(get_cart_idx(a_t, length(terminal)))
-    # @show action_idx
-    q_tp1 = dropgrad(maximum(target_model(s_tp1); dims=1)[1,:])
-    q_t = model(s_t)[action_idx]
     
-    return Flux.mse(q_t, dropgrad(r .+ γ.*q_tp1))
-end
-
-function loss(lu::QLearning, model, s_t::CuArray, a_t, s_tp1::CuArray, r, terminal, target_model)
-    
-    action_idx = dropgrad(get_cart_idx(a_t, length(terminal)))
-    q_tp1 = maximum(target_model(s_tp1); dims=1)[1,:]
+    action_idx = get_cart_idx(a_t, length(terminal))
+    q_tp1 = if target_model isa Nothing
+        dropgrad(maximum(model(s_tp1); dims=1)[1, :])
+    else
+        dropgrad(maximum(target_model(s_tp1); dims=1)[1, :])
+    end
     q_t = @view model(s_t)[action_idx]
     
-    return Flux.mse(q_t, dropgrad(r .+ (one(Int8) .- terminal).*lu.γ.*q_tp1))
-end
-
-function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
-    γ = lu.γ.*(1 .- terminal)
-
-    action_idx = get_cart_idx(a_t, length(terminal))
-
-    q_ztp1 = maximum(model(s_tp1); dims=1)[1,:]
-
-    target = dropgrad(r .+ γ.*q_tp1)
-    q_t = model(s_t)[action_idx]
-    return Flux.mse(target, q_t)
+    return Flux.mse(q_t, dropgrad(r .+ (1 .- terminal).*lu.γ.*q_tp1))
 end
 
 
@@ -73,33 +54,23 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
     γ = lu.γ.*(1 .- terminal)
 
     action_idx = get_cart_idx(a_t, length(terminal))
-    
-    q̃_tp1 = Flux.data(model(s_tp1))
-    q̃_tp1_argmax = findmax(q̃_tp1; dims=1)
-    action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
-    q_tp1 = target_model(s_tp1)[action_tp1]
 
+    q̃_tp1 = dropgrad(model(s_tp1))
+    q̃_tp1_argmax = dropgrad(findmax(q̃_tp1; dims=1))
+    action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
+
+    q_tp1 = if target_model isa Nothing
+        dropgrad(model(s_tp1)[action_tp1])
+    else
+        dropgrad(target_model(s_tp1)[action_tp1])
+    end
+    
     target = dropgrad(r .+ γ.*q_tp1)
     q_t = model(s_t)[action_idx]
     
-    return Flux.mse(target, q_t)
+    return Flux.mse(q_t, target)
 end
 
-function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing)
-    γ = lu.γ.*(1 .- terminal)
-    # action_idx = [CartesianIndex(a_t[i], i) for i in 1:length(terminal)]
-    action_idx = get_cart_idx(a_t, length(terminal))
-    
-    q̃_tp1 = Flux.data(model(s_tp1))
-    q̃_tp1_argmax = findmax(q̃_tp1; dims=1)
-    action_tp1 = [q̃_tp1_argmax[2][i] for i in 1:length(terminal)]
-    q_tp1 = dropgrad(model(s_tp1)[action_tp1])
-
-    target = dropgrad(r .+ γ.*q_tp1)
-    q_t = model(s_t)[action_idx]
-    
-    return Flux.mse(target, q_t)
-end
 
 l1(x) = sum(abs.(x))
 l2(x) = sum(x.^2)
