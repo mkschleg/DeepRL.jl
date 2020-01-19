@@ -108,11 +108,3 @@ function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
     return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
 end
 
-# function sample(er::HistImageReplay, batch_size, sdest, spdest; rng=Random.GLOBAL_RNG)
-#     rows = sample(er.exp_replay, batch_size; rng=rng)
-#     for i = 1:batch_size
-#         copyto!(sdest[:, :, :, i], er.image_buffer[rows.s[i]] ./ 256f0)
-#         copyto!(spdest[ :, :, :, i], er.image_buffer[rows.sp[i]] ./ 256f0)
-#     end
-#     return (s=sdest, a=rows.a, sp=spdest, r=rows.r, t=rows.t)
-# end
