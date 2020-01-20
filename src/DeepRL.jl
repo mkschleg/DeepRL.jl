@@ -10,7 +10,7 @@ export ExperienceReplay,
     size, getindex, add!, sample
 
 include("replay.jl")
-include("ImageBuffer.jl")
+include("image_buffer.jl")
 
 export MountainCar, Atari
 include("env.jl")

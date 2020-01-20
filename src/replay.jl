@@ -1,5 +1,5 @@
-include("buffer.jl")
-include("sumtree.jl")
+include("util/buffer.jl")
+include("util/sumtree.jl")
 
 import Random
 import Base.getindex, Base.size

@@ -12,21 +12,20 @@ Flux.Zygote.@nograd get_cart_idx
 
 abstract type AbstractLearningUpdate end
 
-
 function update!(model,
                  lu::T,
                  opt,
-                 s_t::Array{Array{AF, 1}, 1},
-                 a_t::Array{<:Integer, 1},
-                 s_tp1::Array{Array{AF, 1}, 1},
-                 r::Array{AF, 1},
+                 s_t::Array{<:AbstractArray, 1},
+                 a_t,
+                 s_tp1::Array{<:AbstractArray, 1},
+                 r,
                  terminal,
-                 args...) where {AF<:AbstractFloat, T<:AbstractLearningUpdate}
-    update!(model, lu, opt, hcat(s_t...), a_t, hcat(s_tp1...), r, terminal, args...)
+                 args...) where {T<:AbstractLearningUpdate}
+    throw("Pass state in as a matrix.")
 end
 
-abstract type AbstractQLearning <: AbstractLearningUpdate end
 
+abstract type AbstractQLearning <: AbstractLearningUpdate end
 
 struct QLearning <: AbstractQLearning
     γ::Float32
@@ -72,10 +71,9 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
 end
 
 
-l1(x) = sum(abs.(x))
-l2(x) = sum(x.^2)
-
-function update!(model, lu::LU, opt,
+function update!(model,
+                 lu::LU,
+                 opt,
                  s_t::A,
                  a_t,
                  s_tp1::A,

@@ -16,7 +16,7 @@ mutable struct ImageDQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:Abst
     wait_time_counter::Int
     exp_wait_size::Int
     action::Int
-    prev_s_idx::Φ
+    prev_s::Φ
 end
 
 ImageDQNAgent(model,
@@ -46,17 +46,24 @@ ImageDQNAgent(model,
                   zeros(Int, image_replay.hist))
 
 
+function get_action(agent::ImageDQNAgent, s)
+    
+end
+
 function RLCore.start!(agent::ImageDQNAgent,
                        env_s_tp1,
                        rng::AbstractRNG;
                        kwargs...)
 
     # Start an Episode
-    agent.prev_s_idx .= add!(agent.er, env_s_tp1)
-    
-    prev_s = cat(
-        getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
-        dims=4) |> gpu
+    agent.prev_s .= add!(agent.er, env_s_tp1)
+
+    prev_s = if agent.er isa AbstractImageReplay
+        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+            dims=4) |> gpu
+    else
+        agent.prev_s |> gpu
+    end
     
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),
@@ -72,23 +79,24 @@ function RLCore.step!(agent::ImageDQNAgent,
                       rng::AbstractRNG;
                       kwargs...)
 
-    cur_s = add!(
-        agent.er,
-        env_s_tp1,
-        findfirst((a)->a==agent.action,
-                  agent.ap.action_set),
-        r,
-        terminal)
-
+    cur_s = add!(agent.er,
+                 (agent.prev_s,
+                  findfirst((a)->a==agent.action,
+                            agent.ap.action_set),
+                  env_s_tp1,
+                  r,
+                  terminal))
     
-    agent.prev_s_idx .= cur_s
-    prev_s = cat(
-        getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
-        dims=4) |> gpu
-
-
     update_params!(agent, rng)
 
+    agent.prev_s .= cur_s
+
+    prev_s = if agent.er isa AbstractImageReplay
+        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+            dims=4) |> gpu
+    else
+        agent.prev_s |> gpu
+    end
 
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),

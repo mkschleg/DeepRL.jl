@@ -25,17 +25,17 @@ function construct_agent(env)
     tn_counter_init=10000
     hist_length = 4
     update_wait = 4
+    min_mem_size = 10000
 
     image_replay = DeepRL.HistImageReplay(buffer_size, DeepRL.image_manip_atari, (84,84), hist_length, batch_size)
 
-    
     model = Chain(
-           Conv((8,8), 4=>32, relu, stride=4),
-           Conv((4,4), 32=>64, relu, stride=2),
-           Conv((3,3), 64=>64, relu, stride=1),
-           flatten,
-           Dense(3136, 512, relu),
-           Dense(512, length(get_actions(env)))) |> gpu
+        Conv((8,8), 4=>32, relu, stride=4),
+        Conv((4,4), 32=>64, relu, stride=2),
+        Conv((3,3), 64=>64, relu, stride=1),
+        flatten,
+        Dense(3136, 512, relu),
+        Dense(512, length(get_actions(env)))) |> gpu
 
     target_network  = deepcopy(model)
     
@@ -49,7 +49,7 @@ function construct_agent(env)
                           batch_size,
                           tn_counter_init,
                           update_wait,
-                          10000)
+                          min_mem_size)
     return agent
 end
 
