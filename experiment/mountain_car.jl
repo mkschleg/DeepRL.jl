@@ -29,16 +29,17 @@ function construct_agent(s, num_actions)
 
     target_network = deepcopy(model)
 
-    return DQNAgent(model,
-                    target_network,
-                    ADAM(0.001),
-                    QLearning(γ),
-                    ϵGreedy(ϵ),
-                    1000000,
-                    γ,
-                    batch_size,
-                    tn_counter_init,
-                    s)
+    return DQNAgent{Float32}(model,
+                             target_network,
+                             ADAM(0.001),
+                             QLearning(γ),
+                             ϵGreedy(ϵ, num_actions),
+                             ExperienceReplay(100000),
+                             length(s),
+                             batch_size,
+                             tn_counter_init,
+                             1,
+                             1000)
 end
 
 

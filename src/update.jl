@@ -21,7 +21,7 @@ function update!(model,
                  r,
                  terminal,
                  args...) where {T<:AbstractLearningUpdate}
-    throw("Pass state in as a matrix.")
+    update!(model, lu, opt, cat(s_t...; dims=2), a_t, cat(s_tp1...; dims=2), r, terminal, args...)
 end
 
 

@@ -2,6 +2,12 @@ abstract type AbstractPolicy end
 
 abstract type AbstractValuePolicy <: AbstractPolicy end
 
+action_set(ap::AbstractValuePolicy) = nothing
+
+_get_max_action(ap::AbstractValuePolicy, values) =
+    action_set(ap)[findmax(values)[2]]
+_get_max_action(ap::AbstractValuePolicy, values::CuArray) = 
+    action_set(ap)[findmax(cpu(values))[2]]
 
 """
     ϵGreedy(ϵ, action_set)
@@ -14,7 +20,10 @@ Base.@kwdef struct ϵGreedy{AS} <: AbstractValuePolicy
     action_set::AS
 end
 
-ϵGreedy(ϵ, num_actions::Int) = ϵGreedy(ϵ, 1:num_actions)
+ϵGreedy(ϵ::Float64, num_actions::Int) = ϵGreedy(ϵ, 1:num_actions)
+
+
+action_set(ap::ϵGreedy) = ap.action_set
 
 """
     sample(ap::ϵGreedy, values, rng)
@@ -60,10 +69,13 @@ Base.@kwdef mutable struct ϵGreedyDecay{AS} <: AbstractValuePolicy
     warmup_steps::Int
     cur_step::Int = 0
     action_set::AS
-    ϵGreedyDecay(ϵ_range, decay_period, warmup_steps, action_set::AS) where {AS} = new{AS}(ϵ_range, decay_period, warmup_steps, 0, action_set)
+    ϵGreedyDecay(ϵ_range, decay_period, warmup_steps, action_set::AS) where {AS} =
+        new{AS}(ϵ_range, decay_period, warmup_steps, 0, action_set)
 end
 
 ϵGreedyDecay(ϵ_range, end_step, num_actions) = ϵGreedyDecay(ϵ_range, end_step, 1:num_actions)
+
+action_set(ap::ϵGreedyDecay) = ap.action_set
 
 function _get_eps_for_step(ap::ϵGreedyDecay, step=ap.cur_step)
     ϵ_min = ap.ϵ_range[2]
@@ -79,7 +91,7 @@ function sample(ap::ϵGreedyDecay, values, rng)
     ap.cur_step += 1
     ϵ = _get_eps_for_step(ap::ϵGreedyDecay)
     if rand(rng) > ϵ
-        return ap.action_set[findmax(values)[2]]
+        return _get_max_action(ap, values)
     else
         return rand(rng, ap.action_set)
     end
@@ -88,7 +100,7 @@ end
 function sample(ap::ϵGreedyDecay, values, rng, step)
     ϵ = _get_eps_for_step(ap::ϵGreedyDecay, step)
     if rand(rng) > ϵ
-        return ap.action_set[findmax(values)[2]]
+        return _get_max_action(ap, values)
     else
         return rand(rng, ap.action_set)
     end

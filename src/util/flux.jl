@@ -1,6 +1,5 @@
 
 module FluxUtils
-
 using Flux
 using Random
 
@@ -11,7 +10,6 @@ glorot_normal(rng::Random.AbstractRNG, T::Type, dims...) = randn(rng, T, dims...
 glorot_uniform(rng::Random.AbstractRNG, dims::Vararg{Int64}) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
 glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
 
-
 function get_activations(model::M, data) where {M<:Flux.Chain}
     # Assume it is a chain of things
     activations = [data]
@@ -21,9 +19,7 @@ function get_activations(model::M, data) where {M<:Flux.Chain}
     return activations
 end
 
-function copy_weights(src::M, dest::M) where {M}
-    
-end
+# input_size(model::M) where {M<:Flux.Chain} = model[1]
 
 
 struct ConcatStreams{M1, M2}

@@ -16,6 +16,11 @@ end
 ExperienceReplay(size, types, column_names) =
     ExperienceReplay(CircularBuffer(size, types, column_names))
 
+ExperienceReplay(size) =
+    ExperienceReplay(size,
+                     (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
+                     (:s, :a, :sp, :r, :t))
+
 size(er::ExperienceReplay) = size(er.buffer)
 @forward ExperienceReplay.buffer getindex
 

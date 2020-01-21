@@ -47,7 +47,7 @@ ImageDQNAgent(model,
 
 
 function get_action(agent::ImageDQNAgent, s)
-    
+
 end
 
 function RLCore.start!(agent::ImageDQNAgent,
