@@ -23,7 +23,7 @@ Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, E
     INFO::Dict{Symbol, Any} = Dict{Symbol, Any}()
 end
 
-# const ImageDQNAgent = DQNAgent{M, TN, O, LU, AP, Φ, ER<:AbstractImageReplay}
+const ImageDQNAgent = DQNAgent{M, TN, O, LU, AP, Φ, ER} where {M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractImageReplay}
 
 DQNAgent{Φ}(model,
             target_network,
@@ -59,6 +59,10 @@ DQNAgent(model, target_network, optimizer, learning_update,
                                min_mem_size)
 
 
+get_state(agent::DQNAgent) = agent.prev_s
+get_state(agent::ImageDQNAgent) =
+    agent.replay.img_norm(
+        cat(getindex(agent.replay.image_buffer, agent.prev_s); dims=4))::Array{Float32, 4}
 
 
 function RLCore.start!(agent::DQNAgent,
@@ -68,18 +72,13 @@ function RLCore.start!(agent::DQNAgent,
     
     agent.INFO[:training_loss] = 0.0f0
     # Start an Episode
-    agent.prev_s .= if agent.replay isa AbstractImageReplay
+    agent.prev_s .= if agent isa ImageDQNAgent
         add!(agent.replay, env_s_tp1)
     else
         env_s_tp1
     end
 
-    prev_s = if agent.replay isa AbstractImageReplay
-        cat(getindex(agent.replay.image_buffer, agent.prev_s_idx)./256f0;
-            dims=4) |> gpu
-    else
-        agent.prev_s |> gpu
-    end
+    prev_s = get_state(agent) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(prev_s),
@@ -99,12 +98,12 @@ function RLCore.step!(agent::DQNAgent,
     add_ret = add!(agent.replay,
                    (agent.prev_s,
                     findfirst((a)->a==agent.action,
-                              agent.ap.action_set),
+                              agent.ap.action_set)::Int,
                     env_s_tp1,
                     r,
                     terminal))
 
-    cur_s = if agent.replay isa AbstractImageReplay
+    cur_s = if agent isa ImageDQNAgent
         add_ret
     else
         env_s_tp1
@@ -114,12 +113,7 @@ function RLCore.step!(agent::DQNAgent,
 
     agent.prev_s .= cur_s
 
-    prev_s = if agent.replay isa AbstractImageReplay
-        cat(getindex(agent.replay.image_buffer, agent.prev_s_idx)./256f0;
-            dims=4) |> gpu
-    else
-        agent.prev_s |> gpu
-    end
+    prev_s = get_state(agent) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(prev_s),

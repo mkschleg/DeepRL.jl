@@ -15,6 +15,7 @@ using BSON: @save
 glorot_uniform(rng::Random.AbstractRNG, dims...) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
 glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
 
+image_norm(img) = img./256f0
 
 function construct_agent(env)
 
@@ -27,7 +28,7 @@ function construct_agent(env)
     update_wait = 4
     min_mem_size = 10000
 
-    image_replay = DeepRL.HistImageReplay(buffer_size, DeepRL.image_manip_atari, (84,84), hist_length, batch_size)
+    image_replay = DeepRL.HistImageReplay(buffer_size, (84,84), DeepRL.image_manip_atari, image_norm, hist_length, batch_size)
 
     model = Chain(
         Conv((8,8), 4=>32, relu, stride=4),
@@ -39,13 +40,13 @@ function construct_agent(env)
 
     target_network  = deepcopy(model)
     
-    agent = ImageDQNAgent(model,
+    agent = DQNAgent{Int}(model,
                           target_network,
-                          image_replay,
                           RMSProp(0.00025, 0.95),
                           QLearning(γ),
                           DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 10000, get_actions(env)),
-                          500000,
+                          image_replay,
+                          hist_length,
                           batch_size,
                           tn_counter_init,
                           update_wait,

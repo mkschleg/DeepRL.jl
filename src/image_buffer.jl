@@ -114,8 +114,8 @@ end
 - `transition::Tuple`: A transition tuple (s, a, sp, r, t)
 """
 function add!(er::HistImageReplay, transition::TPL) where {TPL<:Tuple}
-    sp_img = exp_tuple[3]
-    idx = add!(er.image_buffer, sp)
+    sp_img = transition[3]
+    idx = add!(er.image_buffer, sp_img)
     s = copy(er.cur_state)
     sp = [[idx]; er.cur_state[1:3]]
     add!(er.exp_replay, (s, transition[2], sp, transition[4], transition[5]))
