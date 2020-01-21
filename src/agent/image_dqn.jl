@@ -58,12 +58,9 @@ function RLCore.start!(agent::ImageDQNAgent,
     # Start an Episode
     agent.prev_s .= add!(agent.er, env_s_tp1)
 
-    prev_s = if agent.er isa AbstractImageReplay
+    prev_s =
         cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
             dims=4) |> gpu
-    else
-        agent.prev_s |> gpu
-    end
     
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),
@@ -91,12 +88,9 @@ function RLCore.step!(agent::ImageDQNAgent,
 
     agent.prev_s .= cur_s
 
-    prev_s = if agent.er isa AbstractImageReplay
+    prev_s = 
         cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
             dims=4) |> gpu
-    else
-        agent.prev_s |> gpu
-    end
 
     agent.action = sample(agent.ap,
                           cpu(agent.model(prev_s)),
