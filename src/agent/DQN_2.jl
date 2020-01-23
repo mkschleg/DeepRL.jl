@@ -62,7 +62,7 @@ DQNAgent(model, target_network, optimizer, learning_update,
 get_state(agent::DQNAgent) = agent.prev_s
 get_state(agent::ImageDQNAgent) =
     agent.replay.img_norm(
-        cat(getindex(agent.replay.image_buffer, agent.prev_s); dims=4))::Array{Float32, 4}
+        cat(getindex(agent.replay.image_buffer, agent.prev_s); dims=4))
 
 
 function RLCore.start!(agent::DQNAgent,
@@ -70,7 +70,7 @@ function RLCore.start!(agent::DQNAgent,
                        rng::AbstractRNG;
                        kwargs...)
     
-    agent.INFO[:training_loss] = 0.0f0
+    # agent.INFO[:training_loss] = 0.0f0
     # Start an Episode
     agent.prev_s .= if agent isa ImageDQNAgent
         add!(agent.replay, env_s_tp1)
@@ -137,15 +137,15 @@ function update_params!(agent::DQNAgent, rng)
             t = gpu(e.t)
             sp = gpu(e.sp)
             
-            agent.INFO[:training_loss] = update!(agent.model,
-                                                 agent.lu,
-                                                 agent.opt,
-                                                 s,
-                                                 e.a,
-                                                 sp,
-                                                 r,
-                                                 t,
-                                                 agent.target_network)
+            update!(agent.model,
+                    agent.lu,
+                    agent.opt,
+                    s,
+                    e.a,
+                    sp,
+                    r,
+                    t,
+                    agent.target_network)
 
             agent.update_freq_counter = agent.update_freq
         end

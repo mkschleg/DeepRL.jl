@@ -51,6 +51,17 @@ function construct_agent(env)
                           tn_counter_init,
                           update_wait,
                           min_mem_size)
+    # agent = DeepRL.ImageDQNAgent(model,
+    #                              target_network,
+    #                              image_replay,
+    #                              RMSProp(0.00025, 0.95),
+    #                              QLearning(γ),
+    #                              DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 10000, get_actions(env)),
+    #                              buffer_size,
+    #                              batch_size,
+    #                              tn_counter_init,
+    #                              update_wait,
+    #                              min_mem_size)
     return agent
 end
 

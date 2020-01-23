@@ -59,7 +59,7 @@ function RLCore.start!(agent::ImageDQNAgent,
     agent.prev_s .= add!(agent.er, env_s_tp1)
 
     prev_s =
-        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+        cat(getindex(agent.er.image_buffer, agent.prev_s)./256f0;
             dims=4) |> gpu
     
     agent.action = sample(agent.ap,
@@ -89,7 +89,7 @@ function RLCore.step!(agent::ImageDQNAgent,
     agent.prev_s .= cur_s
 
     prev_s = 
-        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+        cat(getindex(agent.er.image_buffer, agent.prev_s)./256f0;
             dims=4) |> gpu
 
     agent.action = sample(agent.ap,
