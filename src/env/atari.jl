@@ -26,8 +26,6 @@ mutable struct Atari{S} <: RLCore.AbstractEnvironment
     height::Int
     rawscreen::Vector{Cuchar}  # raw screen data from the most recent frame
     state::Array{S, 3}  # the game state... raw screen data converted to Float64
-
-
 end
 
 function Atari{S}(gamename::AbstractString; seed=0, frameskip=1) where {S<:Number}
@@ -76,11 +74,11 @@ function update_state!(env::Atari)
         permutedims!(env.state, reshape(env.rawscreen, (3, env.width, env.height)), (3,2,1))
     end
     env.lives = ALE.lives(env.ale)
-    return
+    return env.state
 end
 
 # Set seed default to 0
-function RLCore.reset!(env::Atari, rng::AbstractRNG; kwargs...)
+function RLCore.start!(env::Atari; kwargs...)
     # ALE.setInt(env.ale, "random_seed", seed)
     ALE.reset_game(env.ale)
     env.lives = 0
@@ -90,6 +88,8 @@ function RLCore.reset!(env::Atari, rng::AbstractRNG; kwargs...)
     env.nframes = 0
     update_state!(env)
 end
+
+RLCore.start!(env::Atari, rng::AbstractRNG; kwargs...) = RLCore.start!(env; kwargs...)
 
 function RLCore.environment_step!(env::Atari, action; kwargs...)
     # act and get the reward and new state

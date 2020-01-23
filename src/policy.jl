@@ -3,6 +3,7 @@ abstract type AbstractPolicy end
 abstract type AbstractValuePolicy <: AbstractPolicy end
 
 action_set(ap::AbstractValuePolicy) = nothing
+Base.eltype(ap::AbstractValuePolicy) = eltype(action_set(ap))
 
 _get_max_action(ap::AbstractValuePolicy, values) =
     action_set(ap)[findmax(values)[2]]
@@ -21,7 +22,6 @@ Base.@kwdef struct ϵGreedy{AS} <: AbstractValuePolicy
 end
 
 ϵGreedy(ϵ::Float64, num_actions::Int) = ϵGreedy(ϵ, 1:num_actions)
-
 
 action_set(ap::ϵGreedy) = ap.action_set
 

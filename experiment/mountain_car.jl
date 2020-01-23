@@ -126,7 +126,7 @@ function main_experiment(seed, num_episodes)
         
         # @info "" x = 10
         for e in 1:num_episodes
-            total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 50000; callback=cb)
+            total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 5000)
             next!(p)
         end
     end

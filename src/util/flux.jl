@@ -22,12 +22,36 @@ end
 # input_size(model::M) where {M<:Flux.Chain} = model[1]
 
 
+struct ParallelStreams{T<:Tuple}
+    l::T
+end
+
+ParallelStreams(args...) = ParallelStreams((args))
+
+Flux.@functor ParallelStreams
+(l::ParallelStreams)(x) = map((mdl)->mdl(x), l.l)
+
+function Base.show(io::IO, l::ParallelStreams)
+  print(io, "ParallelStreams(", (string(layer)*", " for layer in l.l)..., ")")
+end
+
+
+struct DualStreams{M1, M2}
+    m1::M1
+    m2::M2
+end
+
+Flux.@functor DualStreams
+(l::DualStreams)(x) = (l.m1(x), l.m2(x))
+
+
+
 struct ConcatStreams{M1, M2}
     m1::M1
     m2::M2
 end
 
-Flux.@treelike ConcatStreams
+Flux.@functor ConcatStreams
 (l::ConcatStreams)(x) = vcat(l.m1(x), l.m2(x))
 
 function Base.show(io::IO, l::ConcatStreams)

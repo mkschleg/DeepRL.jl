@@ -2,7 +2,7 @@
 using Flux
 using Random
 
-mutable struct ImageDQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractImageReplay} <: AbstractAgent
+mutable struct ImageDQNAgent_old{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractImageReplay} <: AbstractAgent
     model::M
     target_network::TN
     opt::O
@@ -19,7 +19,7 @@ mutable struct ImageDQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:Abst
     prev_s::Φ
 end
 
-ImageDQNAgent(model,
+ImageDQNAgent_old(model,
               target_network,
               image_replay,
               opt,
@@ -30,7 +30,7 @@ ImageDQNAgent(model,
               tn_counter_init,
               wait_time,
               exp_wait_size) =
-    ImageDQNAgent(model,
+    ImageDQNAgent_old(model,
                   target_network,
                   opt,
                   lu,
@@ -46,20 +46,19 @@ ImageDQNAgent(model,
                   zeros(Int, image_replay.hist))
 
 
-function get_action(agent::ImageDQNAgent, s)
+function get_action(agent::ImageDQNAgent_old, s)
 
 end
 
-function RLCore.start!(agent::ImageDQNAgent,
+function _start!(agent::ImageDQNAgent_old,
                        env_s_tp1,
-                       rng::AbstractRNG;
-                       kwargs...)
+                       rng::AbstractRNG;)
 
     # Start an Episode
     agent.prev_s .= add!(agent.er, env_s_tp1)
 
     prev_s =
-        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+        cat(getindex(agent.er.image_buffer, agent.prev_s)./256f0;
             dims=4) |> gpu
     
     agent.action = sample(agent.ap,
@@ -69,12 +68,11 @@ function RLCore.start!(agent::ImageDQNAgent,
     return agent.action
 end
 
-function RLCore.step!(agent::ImageDQNAgent,
+function _step!(agent::ImageDQNAgent_old,
                       env_s_tp1,
                       r,
                       terminal,
-                      rng::AbstractRNG;
-                      kwargs...)
+                      rng::AbstractRNG;)
 
     cur_s = add!(agent.er,
                  (agent.prev_s,
@@ -89,7 +87,7 @@ function RLCore.step!(agent::ImageDQNAgent,
     agent.prev_s .= cur_s
 
     prev_s = 
-        cat(getindex(agent.er.image_buffer, agent.prev_s_idx)./256f0;
+        cat(getindex(agent.er.image_buffer, agent.prev_s)./256f0;
             dims=4) |> gpu
 
     agent.action = sample(agent.ap,
@@ -99,7 +97,7 @@ function RLCore.step!(agent::ImageDQNAgent,
     return agent.action
 end
 
-function update_params!(agent::ImageDQNAgent, rng)
+function update_params!(agent::ImageDQNAgent_old, rng)
     
 
     if size(agent.er)[1] > agent.exp_wait_size

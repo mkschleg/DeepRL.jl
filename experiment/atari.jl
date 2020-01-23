@@ -16,6 +16,7 @@ glorot_uniform(rng::Random.AbstractRNG, dims...) = (rand(rng, Float32, dims...) 
 glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
 
 image_norm(img) = img./256f0
+flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
 
@@ -51,6 +52,7 @@ function construct_agent(env)
                           tn_counter_init,
                           update_wait,
                           min_mem_size)
+
     return agent
 end
 
@@ -100,7 +102,7 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
     return total_rew, steps
 end
 
-flatten(x) = reshape(x, :, size(x, 4))
+
 
 function main_experiment(seed, num_max_steps, save_loc; gamename="breakout", prog_meter_offset=0)
 
