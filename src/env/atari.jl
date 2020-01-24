@@ -59,7 +59,7 @@ function Atari{S}(gamename::AbstractString;
         fill(zero(S), h, w, 3)
     end
     
-    Atari{S}(ale, 0, false, 0., 0., 0, w, h, gray_scale, rawscreen, state)
+    Atari{S}(ale, 0, false, 0., 0., 0, w, h, reward_clip, gray_scale, rawscreen, state)
 end
 
 Atari(gamename::AbstractString; kwargs...) = Atari{UInt8}(gamename; kwargs...)
@@ -81,7 +81,7 @@ get_colorview(env::Atari{S}, gray_scale::Val{true}) where {S<:Integer} =
 get_colorview(env::Atari{S}, gray_scale::Val{false}) where {S<:AbstractFloat} = 
     Images.colorview(Images.RGB, permutedims(env.state, (3, 1, 2)))
 get_colorview(env::Atari{S}, gray_scale::Val{false}) where {S<:Integer} = 
-    Images.colorview(Images.RGB{Images.N0f8}, permutedims(env.state, (3, 1, 2))./255)
+    Images.colorview(Images.RGB, permutedims(env.state, (3, 1, 2))./255)
 
 
 @recipe function f(env::Atari)
