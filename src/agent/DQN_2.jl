@@ -63,13 +63,10 @@ DQNAgent(model, target_network, optimizer, learning_update,
 get_state(agent::DQNAgent) = agent.prev_s
 get_state(agent::ImageDQNAgent) =
     agent.replay.img_norm(
-<<<<<<< HEAD
         reshape(getindex(agent.replay.image_buffer, agent.prev_s),
                 agent.replay.image_buffer.img_size..., agent.replay.hist,
                 1))
-=======
-        cat(getindex(agent.replay.image_buffer, agent.prev_s); dims=4))
->>>>>>> 252a31d7a02c18e795e266466e65e8ab55360478
+
 
     # agent.replay.img_norm(
     #     cat(getindex(agent.replay.image_buffer, agent.prev_s); dims=4))

@@ -19,15 +19,15 @@ image_norm(img) = img./256f0
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
-
-    ϵ=0.1
+    # Replicate Marlos' work!
+    
     γ=0.99
     batch_size=32
     buffer_size = 1000000
-    tn_counter_init=10000
+    tn_update_freq= 10000
     hist_length = 4
-    update_wait = 4
-    min_mem_size = 10000
+    update_wait = 5
+    min_mem_size = 50000
 
     image_replay = DeepRL.HistImageReplay(buffer_size, (84,84), DeepRL.image_manip_atari, image_norm, hist_length, batch_size)
 
@@ -49,7 +49,7 @@ function construct_agent(env)
                           image_replay,
                           hist_length,
                           batch_size,
-                          tn_counter_init,
+                          tn_update_freq,
                           update_wait,
                           min_mem_size)
 
@@ -104,7 +104,12 @@ end
 
 
 
-function main_experiment(seed, num_max_steps, save_loc; gamename="breakout", prog_meter_offset=0)
+function main_experiment(seed,
+                         num_frames,
+                         save_loc;
+                         gamename="breakout",
+                         prog_meter_offset=0,
+                         checkin_step)
 
     lg=TBLogger("tensorboard_logs/run", min_level=Logging.Info)
 
@@ -122,21 +127,21 @@ function main_experiment(seed, num_max_steps, save_loc; gamename="breakout", pro
     
 
     Random.seed!(Random.GLOBAL_RNG, seed)
-    env = Atari(gamename; seed=rand(UInt16), frameskip=4)
+    env = Atari(gamename;
+                seed=rand(UInt16),
+                frameskip=5,
+                repeat_action_probability=0.0f0,
+                reward_clip=true)
 
     agent = construct_agent(env)
     total_rews = Array{Int,1}()
     steps = Array{Int,1}()
 
-    save_callback(agnt, s) = begin
-        model = cpu(agnt.model)
-        # println("Save")
-        @save model_save_loc*"/step_$(s).bson" model
-    end
+
 
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
-        num_max_steps;
+        num_frames;
         dt=0.01,
         desc="Step: ",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
@@ -145,14 +150,23 @@ function main_experiment(seed, num_max_steps, save_loc; gamename="breakout", pro
 
     start_time = time()
 
+    save_callback(agnt, s) = begin
+        if (s) % checkin_step == 0
+            model = cpu(agnt.model)
+            total_time = time() - start_time
+            @save model_save_loc*"/step_$(s).bson" model total_rews steps total_time
+        end
+    end
+
+    
     e = 0
     total_steps = 0
-    while sum(steps) < num_max_steps
+    while sum(steps) < num_frames
         # println("episode")
         tr, s = episode!(env,
                          agent,
                          Random.GLOBAL_RNG,
-                         num_max_steps,
+                         num_frames,
                          total_steps,
                          p,
                          save_callback,
@@ -162,10 +176,7 @@ function main_experiment(seed, num_max_steps, save_loc; gamename="breakout", pro
         total_steps += s
         e += 1
     end
-
     end_time = time()
-
-    save_callback(agent, sum(steps))
     close(env)
 
     model = cpu(agent.model)
