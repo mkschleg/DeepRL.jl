@@ -59,7 +59,7 @@ function Atari{S}(gamename::AbstractString;
         fill(zero(S), h, w, 3)
     end
     
-    Atari{S}(ale, 0, false, 0., 0., 0, w, h, gray_scale, rawscreen, state)
+    Atari{S}(ale, 0, false, 0., 0., 0, w, h, reward_clip, gray_scale, rawscreen, state)
 end
 
 Atari(gamename::AbstractString; kwargs...) = Atari{UInt8}(gamename; kwargs...)
@@ -137,7 +137,7 @@ RLCore.start!(env::Atari, rng::AbstractRNG; kwargs...) = RLCore.start!(env; kwar
 function RLCore.environment_step!(env::Atari, action; kwargs...)
     # act and get the reward and new state
     env.reward = if env.reward_clip
-        clamp(ALE.act(env.ale, action), 1, -1)
+        clamp(ALE.act(env.ale, action), -1, 1)
     else
         ALE.act(env.ale, action)
     end

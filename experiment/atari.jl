@@ -26,7 +26,7 @@ function construct_agent(env)
     buffer_size = 1000000
     tn_update_freq= 10000
     hist_length = 4
-    update_wait = 5
+    update_wait = 4
     min_mem_size = 50000
 
     image_replay = DeepRL.HistImageReplay(buffer_size, (84,84), DeepRL.image_manip_atari, image_norm, hist_length, batch_size)
