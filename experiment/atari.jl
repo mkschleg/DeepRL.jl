@@ -20,7 +20,7 @@ glorot_normal(rng::Random.AbstractRNG, dims...) =
 he_normal(rng::Random.AbstractRNG, dims...) =
     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
 
-image_norm(img) = img./256f0
+image_norm(img) = img./255f0
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
