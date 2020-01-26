@@ -16,11 +16,10 @@ Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, E
     prev_s::Φ
     batch_size::Int = 32
     target_update_freq::Int = 10000
-    target_network_counter::Int = 0
     update_freq::Int = 4
-    update_freq_counter::Int = 0
     min_mem_size::Int = 10000
     action::Int = 0
+    training_steps::Int = 0
     INFO::Dict{Symbol, Any} = Dict{Symbol, Any}()
 end
 
@@ -133,8 +132,7 @@ function update_params!(agent::DQNAgent, rng)
     
 
     if size(agent.replay)[1] > agent.min_mem_size
-        agent.update_freq_counter -= 1
-        if agent.update_freq_counter <= 0
+        if agent.training_steps%agent.update_freq == 0
 
             e = sample(agent.replay,
                        agent.batch_size;
@@ -154,15 +152,12 @@ function update_params!(agent::DQNAgent, rng)
                     t,
                     agent.target_network)
 
-            agent.update_freq_counter = agent.update_freq
         end
     end
     
     # Target network updates 
     if !(agent.target_network isa Nothing)
-        agent.target_network_counter -= 1
-        if agent.target_network_counter <= 0
-            agent.target_network_counter = agent.target_update_freq
+        if agent.training_steps%agent.target_update_freq == 0
             for ps ∈ zip(params(agent.model),
                          params(agent.target_network))
                 ps[2] .= ps[1]

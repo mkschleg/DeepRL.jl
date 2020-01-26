@@ -1,5 +1,17 @@
 
 
+
+
+function smooth_l1_loss(y, fx; δ = 1)
+    α = abs(y - fx)
+    abs(α) <= δ && return 0.5f0 * α ^ 2
+    δ * α - (0.5f0 * δ ^ 2)
+end
+
+const huber_loss = smooth_l1_loss
+
+
+
 """
     RMSPropTF(η, ρ)
 Implements the RMSProp algortihm as implemented in tensorflow. 

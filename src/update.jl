@@ -41,7 +41,7 @@ function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
     q_t = @view model(s_t)[action_idx]
     
-    return Flux.mse(q_t, dropgrad(r .+ (1 .- terminal).*lu.γ.*q_tp1))
+    return mean(huber_loss.(q_t, dropgrad(r .+ (1 .- terminal).*lu.γ.*q_tp1)))
 end
 
 
