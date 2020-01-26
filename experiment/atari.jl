@@ -52,7 +52,7 @@ function construct_agent(env)
         Conv((3,3), 64=>64, relu, stride=1),
         flatten,
         Dense(3136, 512, relu),
-        Dense(512, length(get_actions(env)))) |> gpu
+        Dense(512, length(get_actions(env)), identity)) |> gpu
 
     target_network  = deepcopy(model)
     
