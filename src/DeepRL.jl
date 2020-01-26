@@ -11,6 +11,7 @@ export ExperienceReplay,
 
 include("replay.jl")
 include("image_buffer.jl")
+include("optimizers.jl")
 
 export MountainCar, Atari
 include("env.jl")

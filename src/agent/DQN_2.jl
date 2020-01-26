@@ -87,7 +87,7 @@ function RLCore.start!(agent::DQNAgent,
         env_s_tp1
     end
 
-    state = get_state(agent) |> cu
+    state = get_state(agent) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(state),
@@ -120,7 +120,7 @@ function RLCore.step!(agent::DQNAgent,
         env_s_tp1
     end
 
-    prev_s = get_state(agent) |> cu
+    prev_s = get_state(agent) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(prev_s),
@@ -139,10 +139,10 @@ function update_params!(agent::DQNAgent, rng)
             e = sample(agent.replay,
                        agent.batch_size;
                        rng=rng)
-            s = cu(e.s)
-            r = cu(e.r)
-            t = cu(e.t)
-            sp = cu(e.sp)
+            s = gpu(e.s)
+            r = gpu(e.r)
+            t = gpu(e.t)
+            sp = gpu(e.sp)
             
             update!(agent.model,
                     agent.lu,

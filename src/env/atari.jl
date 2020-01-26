@@ -81,7 +81,7 @@ get_colorview(env::Atari{S}, gray_scale::Val{true}) where {S<:Integer} =
 get_colorview(env::Atari{S}, gray_scale::Val{false}) where {S<:AbstractFloat} = 
     Images.colorview(Images.RGB, permutedims(env.state, (3, 1, 2)))
 get_colorview(env::Atari{S}, gray_scale::Val{false}) where {S<:Integer} = 
-    Images.colorview(Images.RGB{Images.N0f8}, permutedims(env.state, (3, 1, 2))./255)
+    Images.colorview(Images.RGB, permutedims(env.state, (3, 1, 2))./255)
 
 
 @recipe function f(env::Atari)
