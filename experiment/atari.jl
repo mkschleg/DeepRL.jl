@@ -12,8 +12,13 @@ using Logging
 using LinearAlgebra
 using BSON: @save
 
-glorot_uniform(rng::Random.AbstractRNG, dims...) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
-glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
+glorot_uniform(rng::Random.AbstractRNG, dims...) =
+    (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
+glorot_normal(rng::Random.AbstractRNG, dims...) =
+    randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
+
+he_normal(rng::Random.AbstractRNG, dims...) =
+    randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
 
 image_norm(img) = img./256f0
 flatten(x) = reshape(x, :, size(x, 4))
@@ -29,7 +34,17 @@ function construct_agent(env)
     update_wait = 5
     min_mem_size = 50000
 
-    image_replay = DeepRL.HistImageReplay(buffer_size, (84,84), DeepRL.image_manip_atari, image_norm, hist_length, batch_size)
+    learning_rate = 0.00025
+    momentum_term = 0.95
+    squared_grad_term = 0.95
+    min_grad_term = 0.01
+
+    image_replay = DeepRL.HistImageReplay(buffer_size,
+                                          (84,84),
+                                          DeepRL.image_manip_atari,
+                                          image_norm,
+                                          hist_length,
+                                          batch_size)
 
     model = Chain(
         Conv((8,8), 4=>32, relu, stride=4),
@@ -43,7 +58,10 @@ function construct_agent(env)
     
     agent = DQNAgent{Int}(model,
                           target_network,
-                          RMSProp(0.00025, 0.95),
+                          DeepRL.RMSPropTF(learning_rate,
+                                           squared_grad_term,
+                                           momentum_term,
+                                           min_grad_term),
                           QLearning(γ),
                           DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 10000, get_actions(env)),
                           image_replay,
@@ -60,6 +78,7 @@ end
 
 function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing, save_callback=nothing, e=0)
     terminal = false
+    
     s_t = start!(env, rng)
     action = start!(agent, s_t, rng)
 
@@ -130,7 +149,7 @@ function main_experiment(seed,
     env = Atari(gamename;
                 seed=rand(UInt16),
                 frameskip=5,
-                repeat_action_probability=0.0f0,
+                repeat_action_probability=0.25f0,
                 reward_clip=true)
 
     agent = construct_agent(env)
