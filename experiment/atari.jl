@@ -1,7 +1,4 @@
 
-
-# module AtariExperiment
-
 using DeepRL
 using Flux
 using Random

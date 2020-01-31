@@ -2,9 +2,7 @@
 using Flux
 using Random
 using BSON
-
-
-
+using RLCore
 
 Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractReplay} <: AbstractAgent
     model::M

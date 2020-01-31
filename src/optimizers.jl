@@ -1,7 +1,6 @@
 
 
 
-
 function smooth_l1_loss(y, fx; δ = 1)
     α = abs(y - fx)
     abs(α) <= δ && return 0.5f0 * α ^ 2

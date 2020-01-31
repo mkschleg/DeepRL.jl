@@ -25,8 +25,7 @@ include("update.jl")
 export DQNAgent, OnlineDQNAgent, AT_DQNAgent, ImageDQNAgent
 include("agent.jl")
 
-
-
 include("utils.jl")
+
 
 end # module
