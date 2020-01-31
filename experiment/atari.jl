@@ -12,13 +12,19 @@ using Logging
 using LinearAlgebra
 using BSON: @save
 
-glorot_uniform(rng::Random.AbstractRNG, dims...) =
-    (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
-glorot_normal(rng::Random.AbstractRNG, dims...) =
-    randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
+# glorot_uniform(rng::Random.AbstractRNG, dims...) =
+#     (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
+# glorot_normal(rng::Random.AbstractRNG, dims...) =
+#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
 
-he_normal(rng::Random.AbstractRNG, dims...) =
-    randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
+# he_normal(rng::Random.AbstractRNG, dims...) =
+#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
+
+# he_normal(rng::Random.AbstractRNG, dims...) =
+#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
+
+# he_normal(rng::Random.AbstractRNG, dims...) =
+#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
 
 image_norm(img) = img./255f0
 flatten(x) = reshape(x, :, size(x, 4))
@@ -37,7 +43,7 @@ function construct_agent(env)
     learning_rate = 0.00025
     momentum_term = 0.95
     squared_grad_term = 0.95
-    min_grad_term = 0.01
+    min_grad_term = 1e-2
 
     image_replay = DeepRL.HistImageReplay(buffer_size,
                                           (84,84),
@@ -47,12 +53,12 @@ function construct_agent(env)
                                           batch_size)
 
     model = Chain(
-        Conv((8,8), 4=>32, relu, stride=4),
-        Conv((4,4), 32=>64, relu, stride=2),
-        Conv((3,3), 64=>64, relu, stride=1),
+        Conv((8,8), 4=>32, relu, stride=4, init=Flux.glorot_normal),
+        Conv((4,4), 32=>64, relu, stride=2, init=Flux.glorot_normal),
+        Conv((3,3), 64=>64, relu, stride=1, init=Flux.glorot_normal),
         flatten,
-        Dense(3136, 512, relu),
-        Dense(512, length(get_actions(env)), identity)) |> gpu
+        Dense(3136, 512, relu, initW=Flux.glorot_normal),
+        Dense(512, length(get_actions(env)), identity, initW=Flux.glorot_normal)) |> gpu
 
     target_network  = deepcopy(model)
     
@@ -63,7 +69,7 @@ function construct_agent(env)
                                            momentum_term,
                                            min_grad_term),
                           QLearning(γ),
-                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 10000, get_actions(env)),
+                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 50000, get_actions(env)),
                           image_replay,
                           hist_length,
                           batch_size,

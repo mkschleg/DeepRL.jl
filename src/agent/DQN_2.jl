@@ -45,7 +45,7 @@ DQNAgent{Φ}(model,
                          prev_s = zeros(Φ, feature_size),
                          batch_size = batch_size,
                          target_update_freq = target_update_freq,
-                         target_network_counter = target_update_freq,
+                         # target_network_counter = target_update_freq,
                          update_freq = update_freq,
                          min_mem_size = min_mem_size)
 
@@ -164,6 +164,8 @@ function update_params!(agent::DQNAgent, rng)
             end
         end
     end
+
+    agent.training_steps += 1
 
     return nothing    
 end

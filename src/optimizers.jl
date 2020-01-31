@@ -1,4 +1,4 @@
-
+import Statistics: mean
 
 
 
@@ -42,6 +42,6 @@ function Flux.Optimise.apply!(o::RMSPropTF, x, Δ)
     acc = get!(o.acc, x, zero(x))::typeof(x)
     mom = get!(o.mom, x, zero(x))::typeof(x)
     @. acc = ρ * acc + (1 - ρ) * Δ^2
-    @. mom = γ * mom + η * Δ/(√acc + ϵ)
+    @. mom = γ * mom + η * Δ/(sqrt(acc + ϵ))
     mom
 end
