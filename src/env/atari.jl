@@ -25,24 +25,28 @@ mutable struct Atari{S} <: RLCore.AbstractEnvironment
     width::Int
     height::Int
     reward_clip::Bool
+    frameskip::Int
+    color_averaging::Symbol
     gray_scale::Bool
     rawscreen::Vector{Cuchar}  # raw screen data from the most recent frame
-    state::Array{S}  # the game state... raw screen data converted to Float64
+    state::Array{S}  # the game state... 
+    state_pre::Array{S} # the game state for doing max pooling...
 end
 
 function Atari{S}(gamename::AbstractString;
                   seed=0,
                   frameskip=5,
-                  color_averaging=false,
+                  color_averaging=:none,
                   repeat_action_probability=0.25f0,
                   reward_clip=false,
                   gray_scale=false) where {S<:Number}
-    
+
+    @assert gamename ∈ ALE.getROMList()
     ale = ALE.ALE_new()
     ALE.setInt(ale, "random_seed", seed)
-    ALE.setInt(ale, "frame_skip", frameskip)
+    # ALE.setInt(ale, "frame_skip", frameskip)
     ALE.setFloat(ale, "repeat_action_probability", repeat_action_probability)
-    ALE.setBool(ale, "color_averaging", color_averaging)
+    # ALE.setBool(ale, "color_averaging", color_averaging)
     ALE.loadROM(ale, gamename)
     w = ALE.getScreenWidth(ale)
     h = ALE.getScreenHeight(ale)
@@ -59,7 +63,7 @@ function Atari{S}(gamename::AbstractString;
         fill(zero(S), h, w, 3)
     end
     
-    Atari{S}(ale, 0, false, 0., 0., 0, w, h, reward_clip, gray_scale, rawscreen, state)
+    Atari{S}(ale, 0, false, 0., 0., 0, w, h, reward_clip, frameskip, color_averaging, gray_scale, rawscreen, state, copy(state))
 end
 
 Atari(gamename::AbstractString; kwargs...) = Atari{UInt8}(gamename; kwargs...)
@@ -92,6 +96,33 @@ get_colorview(env::Atari{S}, gray_scale::Val{false}) where {S<:Integer} =
     aspect_ratio := 1
 
     get_colorview(env, Val(env.gray_scale))
+end
+
+# Horrible code reuse... HAHAHA.
+function update_pre_state!(env::Atari, gray_scale::Val{false})
+    # get the raw screen data
+    ALE.getScreenRGB!(env.ale, env.rawscreen)
+    idx = 1
+    if eltype(env.state) <: AbstractFloat
+        permutedims!(env.state_pre, reshape(env.rawscreen ./ eltype(env.state)(255), (3, env.width, env.height)), (3,2,1)) 
+    elseif eltype(env.state) <: Integer
+        permutedims!(env.state_pre, reshape(env.rawscreen, (3, env.width, env.height)), (3,2,1))
+    end
+    env.lives = ALE.lives(env.ale)
+    return env.state
+end
+
+function update_pre_state!(env::Atari, gray_scale::Val{true})
+    # get the raw screen data
+    ALE.getScreenGrayscale!(env.ale, env.rawscreen)
+    idx = 1
+    if eltype(env.state) <: AbstractFloat
+        permutedims!(env.state_pre, reshape(env.rawscreen ./ eltype(env.state)(255), (env.width, env.height)), (2,1)) 
+    elseif eltype(env.state) <: Integer
+        permutedims!(env.state_pre, reshape(env.rawscreen, (env.width, env.height)), (2,1))
+    end
+    env.lives = ALE.lives(env.ale)
+    return env.state
 end
 
 function update_state!(env::Atari, gray_scale::Val{false})
@@ -134,16 +165,27 @@ end
 
 RLCore.start!(env::Atari, rng::AbstractRNG; kwargs...) = RLCore.start!(env; kwargs...)
 
-function RLCore.environment_step!(env::Atari, action; kwargs...)
+function RLCore.environment_step!(env::Atari{S}, action; kwargs...) where {S<:Number}
     # act and get the reward and new state
-    env.reward = if env.reward_clip
-        clamp(ALE.act(env.ale, action), -1, 1)
-    else
-        ALE.act(env.ale, action)
+
+    # rew = zeros(Float32, env.frameskip)
+    env.reward = 0.0f0
+    for i ∈ 1:env.frameskip
+        env.reward += ALE.act(env.ale, action)
+        if i == (env.frameskip - 1)
+            update_pre_state!(env, Val(env.gray_scale))
+        elseif i == (env.frameskip)
+            update_state!(env, Val(env.gray_scale))
+        end
     end
+
+    if env.color_averaging == :max
+        env.state .= max.(env.state, env.state_pre)
+    elseif env.color_averaging == :average
+        env.state .= S.(round.(mean([env.state, env.state_pre])))
+    end
+
     env.score += env.reward
-    update_state!(env, Val(env.gray_scale))
-    return
 end
 
 RLCore.get_reward(env::Atari) = env.reward 
@@ -154,5 +196,9 @@ function image_manip_atari(s::Array{UInt8, 3})
     Images.colorview(RGB{Images.N0f8}, permutedims(s, (3, 1, 2))) |> # Colorview of array
         (img)->Gray{Images.N0f8}.(Images.imresize(img, (84,84))) |> # Resize image to 84x84
         (Images.rawview ∘ Images.channelview)
+end
+
+function image_manip_atari(s::Array{UInt8, 2})
+    Images.imresize(Float32.(s), (84,84))
 end
 

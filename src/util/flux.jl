@@ -19,8 +19,6 @@ function get_activations(model::M, data) where {M<:Flux.Chain}
     return activations
 end
 
-# input_size(model::M) where {M<:Flux.Chain} = model[1]
-
 
 struct ParallelStreams{T<:Tuple}
     l::T

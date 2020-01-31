@@ -102,7 +102,7 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
         
         s_tp1, rew, terminal = step!(env, action)
 
-        action = step!(agent, s_tp1, rew, terminal, rng)
+        action = step!(agent, s_tp1, clamp(rew, -1, 1), terminal, rng)
 
         if !(save_callback isa Nothing) 
             if (total_steps+steps) % 50000 == 0
@@ -152,8 +152,10 @@ function main_experiment(seed,
     env = Atari(gamename;
                 seed=rand(UInt16),
                 frameskip=5,
+                color_averaging=:max, 
                 repeat_action_probability=0.25f0,
-                reward_clip=true)
+                reward_clip=false,
+                gray_scale=true)
 
     agent = construct_agent(env)
     total_rews = Array{Int,1}()
