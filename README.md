@@ -15,8 +15,14 @@ plot(ret[1])
 ```
 
 
+## Atari Experiments
+
+In the process of developing this repository, I've implemented some very basic versions of a DQN and am benchmarking this implementation against the results and hyperparameters reported in [Revisiting the Arcade Learning Environment: Evaluation Protocols and Open Problems for General Agents by Machado et. al.](https://research.google/pubs/pub48769/). While we are only starting, we want to ensure our results follow closely to these and our API allows for more transparent experiments than previous implementations (i.e. in python). 
+
+
+
 ## Next Steps
 
-- [ ] GPU support
+- [x] GPU support
 - [ ] MonteCarlo Rollouts w/ Mountain Car
 - [ ] Policy Gradients w/ continuous mountain car
