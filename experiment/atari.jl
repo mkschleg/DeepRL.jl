@@ -8,6 +8,7 @@ using TensorBoardLogger
 using Logging
 using LinearAlgebra
 using BSON: @save
+using Distributions
 
 # glorot_uniform(rng::Random.AbstractRNG, dims...) =
 #     (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
@@ -22,6 +23,19 @@ using BSON: @save
 
 # he_normal(rng::Random.AbstractRNG, dims...) =
 #     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
+
+function kaiming_uniform(dims...; gain=sqrt(2))
+   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
+   bound = sqrt(3.0) * gain / sqrt(fan_in)
+   return Float32.(rand(Uniform(-bound, bound), dims...))
+ end
+
+ function kaiming_normal(dims...; gain=sqrt(2))
+   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
+   std = gain / sqrt(fan_in)
+   return Float32.(rand(Normal(0.0, std), dims...))
+ end
+
 
 image_norm(img) = img./255f0
 flatten(x) = reshape(x, :, size(x, 4))
@@ -49,13 +63,14 @@ function construct_agent(env)
                                           hist_length,
                                           batch_size)
 
+    init_f = Flux.glorot_normal
     model = Chain(
-        Conv((8,8), 4=>32, relu, stride=4, init=Flux.glorot_normal),
-        Conv((4,4), 32=>64, relu, stride=2, init=Flux.glorot_normal),
-        Conv((3,3), 64=>64, relu, stride=1, init=Flux.glorot_normal),
+        Conv((8,8), 4=>32, relu, stride=4, init=init_f),
+        Conv((4,4), 32=>64, relu, stride=2, init=init_f),
+        Conv((3,3), 64=>64, relu, stride=1, init=init_f),
         flatten,
-        Dense(3136, 512, relu, initW=Flux.glorot_normal),
-        Dense(512, length(get_actions(env)), identity, initW=Flux.glorot_normal)) |> gpu
+        Dense(3136, 512, relu, initW=init_f),
+        Dense(512, length(get_actions(env)), identity, initW=init_f)) |> gpu
 
     target_network  = deepcopy(model)
     

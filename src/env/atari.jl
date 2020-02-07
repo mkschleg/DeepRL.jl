@@ -199,6 +199,6 @@ function image_manip_atari(s::Array{UInt8, 3})
 end
 
 function image_manip_atari(s::Array{UInt8, 2})
-    Images.imresize(Float32.(s), (84,84))
+    round.(Images.imresize(Float32.(s), (84,84)))
 end
 
