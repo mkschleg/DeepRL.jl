@@ -2,6 +2,27 @@
 
 A repository with some Deep Reinforcement Learning baselines written in julia using Flux. Currently, this is being used to test the refactored version of JuliaRL.
 
+## Installing
+
+Currently, this library is built to be used as a project and not as a package. To use ArcadeLearningEnvironment you need to install a version of cmake before instantiating this environment.
+
+MacOS
+```zsh
+brew install cmake
+```
+
+Linux (apt)
+```zsh
+sudo apt-get install cmake
+```
+
+Then clone this repository and instantiate the environment
+```zsh
+git clone https://github.com/mkschleg/DeepRL.jl.git
+cd DeepRL.jl
+julia --project -e "using Pkg; Pkg.instantiate()"
+```
+
 
 ## To Run
 
