@@ -3,26 +3,12 @@ using DeepRL
 using Flux
 using Random
 using ProgressMeter
-using Plots
+# using Plots
 using TensorBoardLogger
 using Logging
 using LinearAlgebra
 using BSON: @save
 using Distributions
-
-# glorot_uniform(rng::Random.AbstractRNG, dims...) =
-#     (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
-# glorot_normal(rng::Random.AbstractRNG, dims...) =
-#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
-
-# he_normal(rng::Random.AbstractRNG, dims...) =
-#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
-
-# he_normal(rng::Random.AbstractRNG, dims...) =
-#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
-
-# he_normal(rng::Random.AbstractRNG, dims...) =
-#     randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims)) * 0.5f0
 
 function kaiming_uniform(dims...; gain=sqrt(2))
    fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
@@ -37,7 +23,7 @@ function kaiming_uniform(dims...; gain=sqrt(2))
  end
 
 
-image_norm(img) = img./255f0
+
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
@@ -81,7 +67,7 @@ function construct_agent(env)
                                            momentum_term,
                                            min_grad_term),
                           QLearning(γ),
-                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, 50000, get_actions(env)),
+                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, min_mem_size, get_actions(env)),
                           image_replay,
                           hist_length,
                           batch_size,
@@ -103,10 +89,7 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
     total_rew = 0
     steps = 0
     if !(save_callback isa Nothing)
-        if (total_steps+steps) % 50000 == 0
-            # println("Save Model!")
-            save_callback(agent, total_steps+steps)
-        end
+        save_callback(agent, total_steps+steps)
     end
     if !(progress_bar isa Nothing)
         next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
@@ -119,22 +102,19 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
 
         action = step!(agent, s_tp1, clamp(rew, -1, 1), terminal, rng)
 
-        if !(save_callback isa Nothing) 
-            if (total_steps+steps) % 50000 == 0
-                save_callback(agent, total_steps+steps)
-            end
+        if !(save_callback isa Nothing)
+            save_callback(agent, total_steps+steps)
         end
         
-        total_rew += rew        
+        total_rew += rew
         steps += 1
         if !(progress_bar isa Nothing)
             next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
         end
 
-        if total_steps+steps >= max_steps
-            terminal = break
+        if (total_steps+steps >= max_steps) || (steps >= 18000) # 5 Minutes of Gameplay = 18k steps.
+            break
         end
-        
     end
     return total_rew, steps
 end
@@ -164,13 +144,7 @@ function main_experiment(seed,
     
 
     Random.seed!(Random.GLOBAL_RNG, seed)
-    env = Atari(gamename;
-                seed=rand(UInt16),
-                frameskip=5,
-                color_averaging=:max, 
-                repeat_action_probability=0.25f0,
-                reward_clip=false,
-                gray_scale=true)
+    env = DeepRL.RevisitingALEAtari(gamename, rand(UInt16))
 
     agent = construct_agent(env)
     total_rews = Array{Int,1}()
@@ -201,7 +175,6 @@ function main_experiment(seed,
     e = 0
     total_steps = 0
     while sum(steps) < num_frames
-        # println("episode")
         tr, s = episode!(env,
                          agent,
                          Random.GLOBAL_RNG,
