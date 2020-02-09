@@ -45,7 +45,7 @@ function construct_agent(env)
     image_replay = DeepRL.HistImageReplay(buffer_size,
                                           (84,84),
                                           DeepRL.image_manip_atari,
-                                          image_norm,
+                                          DeepRL.image_norm,
                                           hist_length,
                                           batch_size)
 
@@ -66,7 +66,7 @@ function construct_agent(env)
                                            squared_grad_term,
                                            momentum_term,
                                            min_grad_term),
-                          QLearning(γ),
+                          QLearningHuberLoss(γ),
                           DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, min_mem_size, get_actions(env)),
                           image_replay,
                           hist_length,
