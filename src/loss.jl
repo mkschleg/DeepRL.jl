@@ -13,7 +13,7 @@ import Statistics: mean
 
 l1 loss w/ clipping. Also known as the huber loss. Only usable w/ numbers (see `huber_loss` for vector form)
 """
-function smooth_l1_loss(y::Number, fx::Number; δ=1)
+function smooth_l1_loss(y::Number, fx::Number, δ=1)
     α = abs(y - fx)
     abs(α) <= δ && return 0.5f0 * α ^ 2
     δ * α - (0.5f0 * δ ^ 2)
@@ -24,8 +24,8 @@ end
 
 Huber loss. Convenience for smoot_l1_loss
 """
-function huber_loss(y, fx; δ = 1)
-    return smooth_l1_loss.(y, fx; δ=δ)
+function huber_loss(y, fx; δ=1)
+    return smooth_l1_loss.(y, fx, δ)
 end
 
 """

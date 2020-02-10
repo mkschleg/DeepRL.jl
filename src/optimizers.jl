@@ -56,7 +56,8 @@ mutable struct RMSPropTFCentered
     mom::IdDict
 end
 
-RMSPropTFCentered(η = 0.001, ρ = 0.9, γ = 0.0, ϵ = 1e-6) = RMSPropTFCentered(η, ρ, γ, ϵ, IdDict(), IdDict())
+RMSPropTFCentered(η = 0.001, ρ = 0.9, γ = 0.0, ϵ = 1e-6) =
+    RMSPropTFCentered(η, ρ, γ, ϵ, IdDict(), IdDict(), IdDict())
 
 function Flux.Optimise.apply!(o::RMSPropTFCentered, x, Δ)
     η, ρ, γ, ϵ = o.eta, o.rho, o.gamma, o.epsilon

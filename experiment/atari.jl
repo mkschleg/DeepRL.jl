@@ -150,8 +150,6 @@ function main_experiment(seed,
     total_rews = Array{Int,1}()
     steps = Array{Int,1}()
 
-
-
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
         num_frames;
