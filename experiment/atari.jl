@@ -54,7 +54,7 @@ function construct_agent(env)
                                                    momentum_term,
                                                    min_grad_term),
                           QLearningHuberLoss(γ),
-                          DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, min_mem_size, get_actions(env)),
+                          DeepRL.ϵGreedyDecay((1.0, 0.01), 250000, min_mem_size, get_actions(env)),
                           image_replay,
                           hist_length,
                           batch_size,
