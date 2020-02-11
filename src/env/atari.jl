@@ -55,11 +55,12 @@ mutable struct Atari <: RLCore.AbstractEnvironment
 end
 
 function Atari(gamename::AbstractString,
-               seed::UInt16,
+               seed,
                frameskip,
                color_averaging,
-               repeat_action_probability::Float32,
-               gray_scale)
+               repeat_action_probability,
+               gray_scale,
+               terminal_on_life=false)
 
     @assert gamename ∈ ALE.getROMList()
     @assert color_averaging ∈ (:none, :max, :average)
@@ -67,8 +68,8 @@ function Atari(gamename::AbstractString,
     @assert !(frameskip == 1 && color_averaging == :none)
 
     ale = ALE.ALE_new()
-    ALE.setInt(ale, "random_seed", seed)
-    ALE.setFloat(ale, "repeat_action_probability", repeat_action_probability)
+    ALE.setInt(ale, "random_seed", UInt16(seed))
+    ALE.setFloat(ale, "repeat_action_probability", Float32(repeat_action_probability))
     ALE.loadROM(ale, gamename)
     
     w = ALE.getScreenWidth(ale)
@@ -173,15 +174,19 @@ RLCore.get_state(env::Atari) = env.state_buffer[2]
 Helper functions for doing image pre-processing. This does the standard thing of turing the image gray scale 
 (if necessary) and resizes the image too 84*84.
 
+As a note, Images.Gray does the conversion to Luminance as done in the original DQN paper (`0.299 * r + 0.587 * g + 0.114 * b`) 
+but then rounds to fit in a UInt8. It is unclear if this effects the final performance of the DQN or not... (which is a bit dissapointing).
+
 """
 function image_manip_atari(s::Array{UInt8, 3})
-    Images.colorview(RGB{Images.N0f8}, permutedims(s, (3, 1, 2))) |> # Colorview of array
-        (img)->Gray{Images.N0f8}.(Images.imresize(img, (84,84))) |> # Resize image to 84x84
+    Images.colorview(Images.RGB{Images.N0f8}, permutedims(s, (3, 1, 2))) |> # Colorview of array
+        (img)->Images.Gray{Images.N0f8}.(Images.imresize(img, (84,84))) |> # Resize image to 84x84
         (Images.rawview ∘ Images.channelview)
 end
 
 function image_manip_atari(s::Array{UInt8, 2})
-    round.(Images.imresize(Float32.(s), (84,84)))
+    Images.imresize(Images.Gray{Images.N0f8}.(s./UInt8(255)), (84,84)) |>
+        (Images.rawview ∘ Images.channelview)
 end
 
 image_norm(img) = img./255f0

@@ -3,12 +3,25 @@ module FluxUtils
 using Flux
 using Random
 
+function kaiming_uniform(dims...; gain=sqrt(2))
+   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
+   bound = sqrt(3.0) * gain / sqrt(fan_in)
+   return Float32.(rand(Uniform(-bound, bound), dims...))
+ end
 
-glorot_uniform(rng::Random.AbstractRNG, T::Type, dims...) = (rand(rng, T, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
-glorot_normal(rng::Random.AbstractRNG, T::Type, dims...) = randn(rng, T, dims...) .* sqrt(2.0f0/sum(dims))
+ function kaiming_normal(dims...; gain=sqrt(2))
+   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
+   std = gain / sqrt(fan_in)
+   return Float32.(rand(Normal(0.0, std), dims...))
+ end
 
-glorot_uniform(rng::Random.AbstractRNG, dims::Vararg{Int64}) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
-glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
+flatten(x) = reshape(x, :, size(x, 4))
+
+# glorot_uniform(rng::Random.AbstractRNG, T::Type, dims...) = (rand(rng, T, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
+# glorot_normal(rng::Random.AbstractRNG, T::Type, dims...) = randn(rng, T, dims...) .* sqrt(2.0f0/sum(dims))
+
+# glorot_uniform(rng::Random.AbstractRNG, dims::Vararg{Int64}) = (rand(rng, Float32, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
+# glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .* sqrt(2.0f0/sum(dims))
 
 function get_activations(model::M, data) where {M<:Flux.Chain}
     # Assume it is a chain of things

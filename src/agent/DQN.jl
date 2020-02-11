@@ -141,19 +141,20 @@ function update_params!(agent::DQNAgent, rng)
             t = gpu(e.t)
             sp = gpu(e.sp)
             
-            update!(agent.model,
-                    agent.lu,
-                    agent.opt,
-                    s,
-                    e.a,
-                    sp,
-                    r,
-                    t,
-                    agent.target_network)
+            ℒ = update!(agent.model,
+                        agent.lu,
+                        agent.opt,
+                        s,
+                        e.a,
+                        sp,
+                        r,
+                        t,
+                        agent.target_network)
+            # agent.INFO[:loss] = ℒ
         end
     end
     
-    # Target network updates 
+    # Target network updates
     if !(agent.target_network isa Nothing)
         if agent.training_steps%agent.target_update_freq == 0
             for ps ∈ zip(params(agent.model),

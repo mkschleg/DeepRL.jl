@@ -10,20 +10,6 @@ using LinearAlgebra
 using BSON: @save
 using Distributions
 
-function kaiming_uniform(dims...; gain=sqrt(2))
-   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
-   bound = sqrt(3.0) * gain / sqrt(fan_in)
-   return Float32.(rand(Uniform(-bound, bound), dims...))
- end
-
- function kaiming_normal(dims...; gain=sqrt(2))
-   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
-   std = gain / sqrt(fan_in)
-   return Float32.(rand(Normal(0.0, std), dims...))
- end
-
-# glorot_uniform(dims...) = (rand(Float32, dims...) .- 0.5f0) .* sqrt(24.0f0 / sum(Flux.nfan(dims...)))
-
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
@@ -32,10 +18,10 @@ function construct_agent(env)
     γ=0.99
     batch_size=32
     buffer_size = 1000000
-    tn_update_freq= 10000
+    tn_update_freq= 8000
     hist_length = 4
     update_wait = 4
-    min_mem_size = 50000
+    min_mem_size = 20000
 
     
     learning_rate = 0.00025
@@ -113,7 +99,7 @@ function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing,
             next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
         end
 
-        if (total_steps+steps >= max_steps) || (steps >= 18000) # 5 Minutes of Gameplay = 18k steps.
+        if (total_steps+steps >= max_steps) || (steps >= 27000) # 5 Minutes of Gameplay = 18k steps.
             break
         end
     end
@@ -128,8 +114,6 @@ function main_experiment(seed,
                          gamename="breakout",
                          prog_meter_offset=0,
                          checkin_step)
-
-    lg=TBLogger("tensorboard_logs/run", min_level=Logging.Info)
 
     save_loc = joinpath(save_loc, "run_$(seed)")
     if !isdir(save_loc)
@@ -171,21 +155,31 @@ function main_experiment(seed,
     end
 
     
+    lg=TBLogger(joinpath(dirname(save_loc), "tensorboard_logs/run_$(seed)"), min_level=Logging.Info)
+
     e = 0
     total_steps = 0
-    while sum(steps) < num_frames
-        tr, s = episode!(env,
-                         agent,
-                         Random.GLOBAL_RNG,
-                         num_frames,
-                         total_steps,
-                         p,
-                         save_callback,
-                         e)
-        push!(total_rews, tr)
-        push!(steps, s)
-        total_steps += s
-        e += 1
+    prev_log_steps = 0
+    with_logger(lg) do
+        while sum(steps) < num_frames
+            tr, s = episode!(env,
+                             agent,
+                             Random.GLOBAL_RNG,
+                             num_frames,
+                             total_steps,
+                             p,
+                             save_callback,
+                             e)
+            @info "" returns = tr
+            @info "" steps = s
+            if (e % 1000) == 0
+                @info "" parameters = reduce(vcat, vec.(Flux.params(agent.model)))
+            end
+            push!(total_rews, tr)
+            push!(steps, s)
+            total_steps += s
+            e += 1
+        end
     end
     end_time = time()
     close(env)
