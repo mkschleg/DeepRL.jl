@@ -22,7 +22,7 @@ function kaiming_uniform(dims...; gain=sqrt(2))
    return Float32.(rand(Normal(0.0, std), dims...))
  end
 
-
+# glorot_uniform(dims...) = (rand(Float32, dims...) .- 0.5f0) .* sqrt(24.0f0 / sum(Flux.nfan(dims...)))
 
 flatten(x) = reshape(x, :, size(x, 4))
 
@@ -37,10 +37,11 @@ function construct_agent(env)
     update_wait = 4
     min_mem_size = 50000
 
+    
     learning_rate = 0.00025
-    momentum_term = 0.95
+    momentum_term = 0.00
     squared_grad_term = 0.95
-    min_grad_term = 1e-2
+    min_grad_term = 1e-5
 
     image_replay = DeepRL.HistImageReplay(buffer_size,
                                           (84,84),
@@ -49,7 +50,7 @@ function construct_agent(env)
                                           hist_length,
                                           batch_size)
 
-    init_f = Flux.glorot_normal
+    init_f = Flux.glorot_uniform
     model = Chain(
         Conv((8,8), 4=>32, relu, stride=4, init=init_f),
         Conv((4,4), 32=>64, relu, stride=2, init=init_f),
@@ -62,10 +63,10 @@ function construct_agent(env)
     
     agent = DQNAgent{Int}(model,
                           target_network,
-                          DeepRL.RMSPropTF(learning_rate,
-                                           squared_grad_term,
-                                           momentum_term,
-                                           min_grad_term),
+                          DeepRL.RMSPropTFCentered(learning_rate,
+                                                   squared_grad_term,
+                                                   momentum_term,
+                                                   min_grad_term),
                           QLearningHuberLoss(γ),
                           DeepRL.ϵGreedyDecay((1.0, 0.01), 1000000, min_mem_size, get_actions(env)),
                           image_replay,

@@ -15,7 +15,7 @@ l1 loss w/ clipping. Also known as the huber loss. Only usable w/ numbers (see `
 """
 function smooth_l1_loss(y::Number, fx::Number, δ=1)
     α = abs(y - fx)
-    abs(α) <= δ && return 0.5f0 * α ^ 2
+    α <= δ && return 0.5f0 * α ^ 2
     δ * α - (0.5f0 * δ ^ 2)
 end
 
