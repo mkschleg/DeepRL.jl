@@ -10,20 +10,6 @@ using LinearAlgebra
 using BSON: @save
 using Distributions
 
-function kaiming_uniform(dims...; gain=sqrt(2))
-   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
-   bound = sqrt(3.0) * gain / sqrt(fan_in)
-   return Float32.(rand(Uniform(-bound, bound), dims...))
- end
-
- function kaiming_normal(dims...; gain=sqrt(2))
-   fan_in = length(dims) <= 2 ? dims[end] : div(*(dims...), dims[end])
-   std = gain / sqrt(fan_in)
-   return Float32.(rand(Normal(0.0, std), dims...))
- end
-
-
-
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
@@ -128,8 +114,6 @@ function main_experiment(seed,
                          prog_meter_offset=0,
                          checkin_step)
 
-    lg=TBLogger("tensorboard_logs/run", min_level=Logging.Info)
-
     save_loc = joinpath(save_loc, "run_$(seed)")
     if !isdir(save_loc)
         mkpath(save_loc)
@@ -170,21 +154,31 @@ function main_experiment(seed,
     end
 
     
+    lg=TBLogger(joinpath(dirname(save_loc), "tensorboard_logs/run_$(seed)"), min_level=Logging.Info)
+
     e = 0
     total_steps = 0
-    while sum(steps) < num_frames
-        tr, s = episode!(env,
-                         agent,
-                         Random.GLOBAL_RNG,
-                         num_frames,
-                         total_steps,
-                         p,
-                         save_callback,
-                         e)
-        push!(total_rews, tr)
-        push!(steps, s)
-        total_steps += s
-        e += 1
+    prev_log_steps = 0
+    with_logger(lg) do
+        while sum(steps) < num_frames
+            tr, s = episode!(env,
+                             agent,
+                             Random.GLOBAL_RNG,
+                             num_frames,
+                             total_steps,
+                             p,
+                             save_callback,
+                             e)
+            @info "" returns = tr
+            @info "" steps = s
+            if (e % 10) == 0
+                @info "" parameters = reduce(vcat, vec.(Flux.params(agent.model)))
+            end
+            push!(total_rews, tr)
+            push!(steps, s)
+            total_steps += s
+            e += 1
+        end
     end
     end_time = time()
     close(env)
