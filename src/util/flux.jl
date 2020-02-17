@@ -15,7 +15,7 @@ function kaiming_uniform(dims...; gain=sqrt(2))
    return Float32.(rand(Normal(0.0, std), dims...))
  end
 
-flatten(x) = reshape(x, :, size(x, 4))
+
 
 # glorot_uniform(rng::Random.AbstractRNG, T::Type, dims...) = (rand(rng, T, dims...) .- 0.5f0) .* sqrt(24.0f0/sum(dims))
 # glorot_normal(rng::Random.AbstractRNG, T::Type, dims...) = randn(rng, T, dims...) .* sqrt(2.0f0/sum(dims))

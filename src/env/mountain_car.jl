@@ -11,7 +11,6 @@ const pos_initial_range = (-0.6, 0.4)
 const Reverse=1
 const Neutral=2
 const Accelerate=3
-
 end
 
 """

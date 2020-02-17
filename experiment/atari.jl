@@ -13,7 +13,7 @@ using Distributions
 flatten(x) = reshape(x, :, size(x, 4))
 
 function construct_agent(env)
-    # Replicate Marlos' work!
+    # Replicate Dopamine's Results!
     
     γ=0.99
     batch_size=32
