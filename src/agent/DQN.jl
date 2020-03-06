@@ -2,7 +2,7 @@
 using Flux
 using Random
 using BSON
-using RLCore
+using MinimalRLCore
 
 Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractReplay} <: AbstractAgent
     model::M
@@ -64,20 +64,19 @@ DQNAgent(model, target_network, optimizer, learning_update,
                                min_mem_size)
 
 
-get_state(agent::DQNAgent) = agent.prev_s
-get_state(agent::ImageDQNAgent) =
+get_state(agent::DQNAgent, s) = s
+get_state(agent::ImageDQNAgent, s) =
     agent.replay.img_norm(
-        reshape(getindex(agent.replay.image_buffer, agent.prev_s),
+        reshape(getindex(agent.replay.image_buffer, s),
                 agent.replay.image_buffer.img_size..., agent.replay.hist,
                 1))
 
 warmup_replay(agent::DQNAgent, env_s_tp1) = env_s_tp1
 warmup_replay(agent::ImageDQNAgent, env_s_tp1) = add!(agent.replay, env_s_tp1)
 
-function RLCore.start!(agent::DQNAgent,
+function MinimalRLCore.start!(agent::DQNAgent,
                        env_s_tp1,
-                       rng::AbstractRNG;
-                       kwargs...)
+                       rng::AbstractRNG)
     
     agent.prev_s .= if agent isa ImageDQNAgent
         add!(agent.replay, env_s_tp1)
@@ -85,7 +84,7 @@ function RLCore.start!(agent::DQNAgent,
         env_s_tp1
     end
 
-    state = get_state(agent) |> gpu
+    state = get_state(agent, agent.prev_s) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(state),
@@ -94,12 +93,11 @@ function RLCore.start!(agent::DQNAgent,
     return agent.action
 end
 
-function RLCore.step!(agent::DQNAgent,
-                      env_s_tp1,
-                      r,
-                      terminal,
-                      rng::AbstractRNG;
-                      kwargs...)
+function MinimalRLCore.step!(agent::DQNAgent,
+                             env_s_tp1,
+                             r,
+                             terminal,
+                             rng::AbstractRNG)
 
     
     add_ret = add!(agent.replay,
@@ -118,7 +116,7 @@ function RLCore.step!(agent::DQNAgent,
         env_s_tp1
     end
 
-    prev_s = get_state(agent) |> gpu
+    prev_s = get_state(agent, agent.prev_s) |> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(prev_s),

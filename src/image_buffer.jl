@@ -12,27 +12,23 @@ A cicular buffer for images.
 - `image_manip`: A function (or callable object) which takes the raw image and returns the pre-processed image (returning UInt8 arrays).
 
 """
-mutable struct ImageBuffer{A<:AbstractArray{UInt8}, IM, TPL<:Tuple}
-    step_buffer::Array{Int, 1}
+mutable struct StateBuffer{A<:AbstractArray{UInt8}, TPL<:Tuple}
     img_buffer::A
-    image_manip::IM
     cur_idx::Int
     capacity::Int
     full::Bool
     img_size::TPL
 end
 
-ImageBuffer(size::Int, image_manip, img_size) = 
-    ImageBuffer(
-        zeros(Int, size),
+ImageBuffer(size::Int, img_size) = 
+    StateBuffer(
         zeros(UInt8, img_size..., size),
-        image_manip,
         1,
         size,
         false,
         img_size)
 
-function add!(imb::ImageBuffer, img)
+function add!(imb::StateBuffer, img)
 
     ret = imb.cur_idx
     if imb.img_buffer isa CuArray
@@ -50,17 +46,16 @@ function add!(imb::ImageBuffer, img)
     return ret
 end
 
-function view_add!(imb::ImageBuffer, img)
+function view_add!(imb::StateBuffer, img)
     idx = add!(imb, img)
     return view(imb, idx)
 end
 
-getindex(imb::ImageBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, :, idx)
-Base.view(imb::ImageBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, :, idx)
+getindex(imb::StateBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, :, idx)
+Base.view(imb::StateBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, :, idx)
 
-getindex(imb::ImageBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, idx)
-Base.view(imb::ImageBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, idx)
-
+getindex(imb::StateBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, idx)
+Base.view(imb::StateBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, idx)
 
 abstract type AbstractImageReplay <: AbstractReplay end
 
@@ -123,16 +118,13 @@ function add!(er::HistImageReplay, transition::TPL) where {TPL<:Tuple}
 end
 
 function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
-    # idx = rand(rng, 1:size(er), batch_size)
-    # rows = getindex(er.exp_replay, idx)
 
     rows = sample(er.exp_replay, batch_size; rng=rng)
     for i = 1:batch_size
         er.s[:, :, :, i] .= er.img_norm(er.image_buffer[rows.s[i]])
         er.sp[ :, :, :, i] .= er.img_norm(er.image_buffer[rows.sp[i]])
     end
-    # er.s .= cat([er.image_buffer[rows.s[i]]./256f0 for i = 1:batch_size]...;dims=4)
-    # er.sp .= cat([er.image_buffer[rows.sp[i]]./256f0 for i = 1:batch_size]...;dims=4)
+
     return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
 end
 

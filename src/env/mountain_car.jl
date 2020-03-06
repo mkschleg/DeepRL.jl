@@ -1,7 +1,7 @@
 
 using Random
 
-import RLCore
+import MinimalRLCore
 
 module MountainCarConst
 const vel_limit = (-0.07, 0.07)
@@ -21,7 +21,7 @@ MountainCar(rng::AbstractRNG, normalized::Bool=false)
     The mountain car environment.
 
 """
-mutable struct MountainCar <: RLCore.AbstractEnvironment
+mutable struct MountainCar <: MinimalRLCore.AbstractEnvironment
     pos::Float64
     vel::Float64
     actions::AbstractSet
@@ -35,20 +35,19 @@ mutable struct MountainCar <: RLCore.AbstractEnvironment
 end
 
 
-RLCore.get_actions(env::MountainCar) = env.actions
+MinimalRLCore.get_actions(env::MountainCar) = env.actions
 valid_action(env::MountainCar, action) = action in env.actions
 
 
-function RLCore.reset!(env::MountainCar, rng::AbstractRNG; kwargs...)
+function MinimalRLCore.reset!(env::MountainCar, rng::AbstractRNG)
     env.pos = (rand(rng)*(MountainCarConst.pos_initial_range[2]
                           - MountainCarConst.pos_initial_range[1])
                + MountainCarConst.pos_initial_range[1])
     env.vel = 0.0
 end
 
-function RLCore.reset!(env::MountainCar,
-                        start_state::T;
-                        kwargs...) where {T<:AbstractArray}
+function MinimalRLCore.reset!(env::MountainCar,
+                              start_state::T) where {T<:AbstractArray}
     if env.normalized
         env.pos = start_state[1]
         env.vel = start_state[2]
@@ -61,7 +60,7 @@ function RLCore.reset!(env::MountainCar,
 end
 
 
-function RLCore.environment_step!(env::MountainCar, action, rng::AbstractRNG; kwargs...)
+function MinimalRLCore.environment_step!(env::MountainCar, action, rng::AbstractRNG=Random.GLOBAL_RNG)
     
     @boundscheck valid_action(env, action)
     env.vel =
@@ -72,7 +71,7 @@ function RLCore.environment_step!(env::MountainCar, action, rng::AbstractRNG; kw
 end
 
 
-function RLCore.get_reward(env::MountainCar) # -> determines if the agent_state is terminal
+function MinimalRLCore.get_reward(env::MountainCar) # -> determines if the agent_state is terminal
     if env.pos >= MountainCarConst.pos_limit[2]
         return 0
     end
@@ -80,12 +79,12 @@ function RLCore.get_reward(env::MountainCar) # -> determines if the agent_state 
 end
 
 
-function RLCore.is_terminal(env::MountainCar) # -> determines if the agent_state is terminal
+function MinimalRLCore.is_terminal(env::MountainCar) # -> determines if the agent_state is terminal
     return env.pos >= MountainCarConst.pos_limit[2]
 end
 
 
-function RLCore.get_state(env::MountainCar)
+function MinimalRLCore.get_state(env::MountainCar)
     if env.normalized
         return get_normalized_state(env)
     else

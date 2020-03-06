@@ -113,14 +113,14 @@ function main_experiment(seed, num_episodes)
         barlen=Int64(floor(num_episodes/length(front))))
 
     data_range = collect.(collect(Iterators.product(-1.0:0.01:1.0, -1.0:0.01:1.0)))
-    # with_logger(lg) do
+
     with_logger(lg) do
 
         cb(ag, env, state_tuple) = begin
             @info "" training_loss = agent.INFO[:training_loss]
             if state_tuple[2] == nothing
                 # @info "" network_params = flat(params(agent.model))
-                
+                 
             end
         end
         

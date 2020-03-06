@@ -9,17 +9,21 @@ abstract type AbstractReplay end
 
 abstract type AbstractWeightedReplay <: AbstractReplay end
 
-mutable struct ExperienceReplay{CB<:CircularBuffer} <: AbstractReplay
+mutable struct ExperienceReplay{CB<:CircularBuffer, SB} <: AbstractReplay
     buffer::CB
+    state_buffer::SB
 end
 
-ExperienceReplay(size, types, column_names) =
-    ExperienceReplay(CircularBuffer(size, types, column_names))
+ExperimentReplay(size, types, shapes, column_names) =
+    ExperimentReplay(CircularBuffer(size, types, shapes, column_names), nothing)
 
-ExperienceReplay(size) =
+ExperienceReplay(size, obs_size, obs_type=Float32) =
     ExperienceReplay(size,
-                     (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
+                     (obs_type, Int, obs_type, Float32, Bool),
+                     (obs_size, 1, obs_size, 1, 1),
                      (:s, :a, :sp, :r, :t))
+
+ExperienceReplay
 
 size(er::ExperienceReplay) = size(er.buffer)
 @forward ExperienceReplay.buffer getindex

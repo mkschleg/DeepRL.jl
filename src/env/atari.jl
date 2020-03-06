@@ -1,4 +1,4 @@
-import RLCore
+import MinimalRLCore
 
 using RecipesBase
 import Images
@@ -31,7 +31,7 @@ Use cases found in the literature not yet implemented:
 - `color_averaging`: Can be any of the set `(:none, :max, :average)`
 - `gray_scale`: If true this will return the gray scale images provided by the ALE library. If false the full color images will be returned.
 """
-mutable struct Atari <: RLCore.AbstractEnvironment
+mutable struct Atari <: MinimalRLCore.AbstractEnvironment
     # Pointer to ALE
     ale::ALE.ALEPtr
 
@@ -111,8 +111,8 @@ function Base.close(env::Atari)
     ALE.ALE_del(env.ale)
 end
 
-RLCore.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
-valid_action(env::Atari, action) = action in RLCore.get_actions(env)
+MinimalRLCore.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
+valid_action(env::Atari, action) = action in MinimalRLCore.get_actions(env)
 get_minimal_actions(env::Atari) = ALE.getMinimalActionSet(env.ale)
 
 
@@ -139,7 +139,7 @@ function _pool_state(env::Atari)
 end
 
 # Set seed default to 0
-function RLCore.start!(env::Atari; kwargs...)
+function MinimalRLCore.start!(env::Atari)
     ALE.reset_game(env.ale)
     env.lives = 0
     env.died = false
@@ -148,9 +148,9 @@ function RLCore.start!(env::Atari; kwargs...)
     update_state!(env, 2)
 end
 
-RLCore.start!(env::Atari, rng::AbstractRNG; kwargs...) = RLCore.start!(env; kwargs...)
+MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env; kwargs...)
 
-function RLCore.environment_step!(env::Atari, action; kwargs...)
+function MinimalRLCore.environment_step!(env::Atari, action)
 
     env.reward = 0.0f0
     for i ∈ 1:env.frameskip
@@ -163,9 +163,9 @@ function RLCore.environment_step!(env::Atari, action; kwargs...)
     env.score += env.reward
 end
 
-RLCore.get_reward(env::Atari) = env.reward 
-RLCore.is_terminal(env::Atari) = ALE.game_over(env.ale)
-RLCore.get_state(env::Atari) = env.state_buffer[2]
+MinimalRLCore.get_reward(env::Atari) = env.reward 
+MinimalRLCore.is_terminal(env::Atari) = ALE.game_over(env.ale)
+MinimalRLCore.get_state(env::Atari) = env.state_buffer[2]
 
 
 """

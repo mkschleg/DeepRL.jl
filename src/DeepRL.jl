@@ -3,12 +3,13 @@ module DeepRL
 greet() = print("Hello Deep Reinforcement Learning!")
 
 using Reexport, Lazy
-@reexport using RLCore
+@reexport using MinimalRLCore
 
 export ExperienceReplay,
     WeightedExperienceReplay, OnlineReplay,
     size, getindex, add!, sample
 
+include("util/table_buffer.jl")
 include("replay.jl")
 include("image_buffer.jl")
 include("optimizers.jl")
