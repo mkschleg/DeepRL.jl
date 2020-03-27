@@ -1,5 +1,5 @@
-include("buffer.jl")
-include("sumtree.jl")
+include("util/buffer.jl")
+include("util/sumtree.jl")
 
 import Random
 import Base.getindex, Base.size
@@ -9,21 +9,30 @@ abstract type AbstractReplay end
 
 abstract type AbstractWeightedReplay <: AbstractReplay end
 
-mutable struct ExperienceReplay{CB<:CircularBuffer} <: AbstractReplay
+mutable struct ExperienceReplay{CB<:CircularBuffer, SB} <: AbstractReplay
     buffer::CB
+    state_buffer::SB
 end
 
-ExperienceReplay(size, types, column_names) =
-    ExperienceReplay(CircularBuffer(size, types, column_names))
+ExperimentReplay(size, types, shapes, column_names) =
+    ExperimentReplay(CircularBuffer(size, types, shapes, column_names), nothing)
+
+ExperienceReplay(size, obs_size, obs_type=Float32) =
+    ExperienceReplay(size,
+                     (obs_type, Int, obs_type, Float32, Bool),
+                     (obs_size, 1, obs_size, 1, 1),
+                     (:s, :a, :sp, :r, :t))
+
+ExperienceReplay
 
 size(er::ExperienceReplay) = size(er.buffer)
 @forward ExperienceReplay.buffer getindex
 
 add!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
 
-function sample(er::ExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
+function sample(er::ExperienceReplay, batch_size::Int; rng=Random.GLOBAL_RNG)
     idx = rand(rng, 1:size(er), batch_size)
-    return getrow(er.buffer, idx)
+    return getindex(er, idx)
 end
 
 mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
@@ -48,8 +57,6 @@ function sample(er::OnlineReplay, batch_size; rng=Random.GLOBAL_RNG)
     return er[(end-batch_size+1):end]
 end
 
-
-
 mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedReplay
     buffer::CB
     sumtree::SumTree
@@ -72,4 +79,8 @@ function sample(er::WeightedExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     batch_idx, batch_priorities, idx = sample(er.sumtree, batch_size; rng=rng)
     return getrow(er.buffer, idx)
 end
+
+
+
+
 

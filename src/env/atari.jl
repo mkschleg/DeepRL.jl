@@ -1,59 +1,205 @@
-import RLCore
+import MinimalRLCore
 
-using Plots
+using RecipesBase
+import Images
+using Images: permutedims, permutedims!
 
 import ArcadeLearningEnvironment
 const ALE = ArcadeLearningEnvironment
 
 
 """
-    Atari
+    Atari(gamename; seed, frameskip, color_averaging, repeat_action_probabiliyt, gray_scale)
 
 An interface adapted from https://github.com/JuliaML/AtariAlgos.jl/blob/master/src/AtariAlgos.jl with a backend 
 implemented by https://github.com/JuliaReinforcementLearning/ArcadeLearningEnvironment.jl. Because we want to have
 some better fidelity with settings, reimplementing is easier than writting a wrapper around a wrapper around a wrapper...
+
+Many current implementations of these utilities in Python use a compositional design pattern. I find this often 
+obfuscates what exactly is going on and forces users to travers several classes and types to understand the code. 
+Here we've decided to take a more procedural approach. The end user can still wrap this type to provide their own 
+settings or use this type as a template for their own implementation.
+
+Use cases found in the literature not yet implemented:
+- Terminate on life lost
+- 
+
+## Arguments
+- `gamename::AbstractString`: Name of game (should be found in rom list.)
+- `seed::Int32`: The seed passed to the ALE environment. This needs to be a 32 bit integer for ALE.
+- `frameskip`: The number of frames skipped between actions. If set to 1, `color_averaging` must be set to `:none`
+- `color_averaging`: Can be any of the set `(:none, :max, :average)`
+- `gray_scale`: If true this will return the gray scale images provided by the ALE library. If false the full color images will be returned.
 """
-mutable struct Atari{S} <: RLCore.AbstractEnvironment
+mutable struct Atari <: MinimalRLCore.AbstractEnvironment
+    # Pointer to ALE
     ale::ALE.ALEPtr
+
+    # Details of current episode
     lives::Int
     died::Bool
     reward::Float64
     score::Float64
-    nframes::Int
+
+    # settings
+    gamename::String
+    frameskip::Int
+    color_averaging::Symbol
+    gray_scale::Bool
+
+    # details needed for constructing the base state.
     width::Int
     height::Int
     rawscreen::Vector{Cuchar}  # raw screen data from the most recent frame
-    state::Array{S, 3}  # the game state... raw screen data converted to Float64
-    screen::Matrix{RGB{Float64}}
-
-    function Atari{S}(gamename::AbstractString) where {S<:Number}
-        ale = ALE.ALE_new()
-        ALE.loadROM(ale, gamename)
-        w = ALE.getScreenWidth(ale)
-        h = ALE.getScreenHeight(ale)
-        rawscreen = Array{Cuchar}(undef, w * h * 3)
-        screen = fill(RGB{Float64}(0,0,0), h, w)
-        state = fill(zero(S), h, w, 3)
-        new{S}(ale, 0, false, 0., 0., 0, w, h, rawscreen, state, screen)
-    end
+    state_buffer::Array{Array{UInt8}, 1}
 end
-Atari(gamename::AbstractString) = Atari{Float32}(gamename)
 
+function Atari(gamename::AbstractString,
+               seed,
+               frameskip,
+               color_averaging,
+               repeat_action_probability,
+               gray_scale,
+               terminal_on_life=false)
+
+    @assert gamename ∈ ALE.getROMList()
+    @assert color_averaging ∈ (:none, :max, :average)
+    @assert frameskip >= 1
+    @assert !(frameskip == 1 && color_averaging == :none)
+
+    ale = ALE.ALE_new()
+    ALE.setInt(ale, "random_seed", UInt16(seed))
+    ALE.setFloat(ale, "repeat_action_probability", Float32(repeat_action_probability))
+    ALE.loadROM(ale, gamename)
+    
+    w = ALE.getScreenWidth(ale)
+    h = ALE.getScreenHeight(ale)
+    
+    rawscreen = if gray_scale
+        Array{Cuchar}(undef, w * h)
+    else
+        Array{Cuchar}(undef, w * h * 3)
+    end
+
+    state = if gray_scale
+        [fill(zero(UInt8), h, w), fill(zero(UInt8), h, w)]
+    else
+        [fill(zero(UInt8), h, w, 3), fill(zero(UInt8), h, w, 3)]
+    end
+    
+    Atari(ale, 0, false, 0.0, 0.0, gamename, frameskip, color_averaging, gray_scale, w, h, rawscreen, state)
+end
+
+Base.show(io::IO, env::Atari) =
+    println(io, "$(env.gamename)(frameskip=$(env.frameskip), color_averaging=$(env.color_averaging), gray_scale=$(env.gray_scale))")
+
+
+# Various default versions of Atari found in literature
+"""
+    RevisitingALEAtari(gamename, seed)
+
+This is the settings used in "Revisiting the Arcade Learning Environment: Evaluation Protocols and Open Problems for General Agents." by Marlos Machado et. al. See https://arxiv.org/abs/1709.06009.
+
+"""
+RevisitingALEAtari(gamename, seed) =
+    Atari(gamename, seed, 5, :max, 0.25f0, true)
+
+
+
+# Some utility functions
 function Base.close(env::Atari)
-    env.state = typeof(env.state)(undef, 0, 0, 0)
     ALE.ALE_del(env.ale)
 end
 
-RLCore.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
-valid_action(env::Atari, action) = action in RLCore.get_actions(env)
+MinimalRLCore.get_actions(env::Atari) = ALE.getLegalActionSet(env.ale)
+valid_action(env::Atari, action) = action in MinimalRLCore.get_actions(env)
+get_minimal_actions(env::Atari) = ALE.getMinimalActionSet(env.ale)
 
 
-function update_screen(env::Atari)
-    for i in 1:env.height, j in 1:env.width
-        env.screen[i,j] = RGB{Float64}(env.state[i, j, 1], env.state[i, j, 2], env.state[i, j, 3])
+function update_state!(env::Atari, t)
+    # get the raw screen data
+
+    if env.gray_scale
+        ALE.getScreenGrayscale!(env.ale, env.rawscreen)
+        permutedims!(env.state_buffer[t], reshape(env.rawscreen, (env.width, env.height)), (2,1))
+    else
+        ALE.getScreenRGB!(env.ale, env.rawscreen)
+        permutedims!(env.state_buffer[t], reshape(env.rawscreen, (3, env.width, env.height)), (3,2,1))
     end
-    env.screen
+    env.lives = ALE.lives(env.ale)
+    return env.state_buffer[t]
 end
+
+function _pool_state(env::Atari)
+    if env.color_averaging == :max
+        env.state_buffer[2] .= max.(env.state_buffer[1], env.state_buffer[2])
+    elseif env.color_averaging == :average
+        env.state_buffer[2] .= UInt8.(round.(mean([env.state_buffer[1], env.state_buffer[2]])))
+    end
+end
+
+# Set seed default to 0
+function MinimalRLCore.start!(env::Atari)
+    ALE.reset_game(env.ale)
+    env.lives = 0
+    env.died = false
+    env.reward = 0
+    env.score = 0
+    update_state!(env, 2)
+end
+
+MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env; kwargs...)
+
+function MinimalRLCore.environment_step!(env::Atari, action)
+
+    env.reward = 0.0f0
+    for i ∈ 1:env.frameskip
+        env.reward += ALE.act(env.ale, action)
+        if (env.frameskip - i) < 2
+            update_state!(env, env.frameskip - i + 1)
+        end
+    end
+
+    env.score += env.reward
+end
+
+MinimalRLCore.get_reward(env::Atari) = env.reward 
+MinimalRLCore.is_terminal(env::Atari) = ALE.game_over(env.ale)
+MinimalRLCore.get_state(env::Atari) = env.state_buffer[2]
+
+
+"""
+    image_manip_atari(s)
+
+Helper functions for doing image pre-processing. This does the standard thing of turing the image gray scale 
+(if necessary) and resizes the image too 84*84.
+
+As a note, Images.Gray does the conversion to Luminance as done in the original DQN paper (`0.299 * r + 0.587 * g + 0.114 * b`) 
+but then rounds to fit in a UInt8. It is unclear if this effects the final performance of the DQN or not... (which is a bit dissapointing).
+
+"""
+function image_manip_atari(s::Array{UInt8, 3})
+    Images.colorview(Images.RGB{Images.N0f8}, permutedims(s, (3, 1, 2))) |> # Colorview of array
+        (img)->Images.Gray{Images.N0f8}.(Images.imresize(img, (84,84))) |> # Resize image to 84x84
+        (Images.rawview ∘ Images.channelview)
+end
+
+function image_manip_atari(s::Array{UInt8, 2})
+    Images.imresize(Images.Gray{Images.N0f8}.(s./UInt8(255)), (84,84)) |>
+        (Images.rawview ∘ Images.channelview)
+end
+
+image_norm(img) = img./255f0
+
+#####
+# Visualization through RecipeBase.jl
+#####
+
+get_colorview(env::Atari, gray_scale::Val{true}) = 
+    Images.colorview(Images.Gray, permutedims(reshape(env.rawscreen, (env.width, env.height)), (2,1))./255)
+
+get_colorview(env::Atari, gray_scale::Val{false}) = 
+    Images.colorview(Images.RGB, permutedims(reshape(env.rawscreen, (3, env.width, env.height)), (3,2,1))./255)
 
 @recipe function f(env::Atari)
     ticks := nothing
@@ -62,44 +208,5 @@ end
     legend := false
     aspect_ratio := 1
 
-    # convert to Image
-    update_screen(env)
+    get_colorview(env, Val(env.gray_scale))
 end
-
-function update_state(env::Atari)
-    # get the raw screen data
-    ALE.getScreenRGB!(env.ale, env.rawscreen)
-    idx = 1
-    for i in 1:env.height, j in 1:env.width
-        env.state[i,j,1] = env.rawscreen[idx] // 256
-        env.state[i,j,2] = env.rawscreen[idx+1] // 256
-        env.state[i,j,3] = env.rawscreen[idx+2] // 256
-        idx += 3
-    end
-    env.lives = ALE.lives(env.ale)
-    return
-end
-
-# Set seed default to 0
-function RLCore.reset!(env::Atari; seed::Int64=0, kwargs...)
-    ALE.reset_game(env.ale)
-    ALE.setInt(env.ale, "random_seed", seed)
-    env.lives = 0
-    env.died = false
-    env.reward = 0
-    env.score = 0
-    env.nframes = 0
-    update_state(env)
-end
-
-function RLCore.environment_step!(env::Atari, action; kwargs...)
-    # act and get the reward and new state
-    env.reward = ALE.act(env.ale, action)
-    env.score += env.reward
-    update_state(env)
-    return
-end
-
-RLCore.get_reward(env::Atari) = env.reward 
-RLCore.is_terminal(env::Atari) = ALE.game_over(env.ale)
-RLCore.get_state(env::Atari) = env.state

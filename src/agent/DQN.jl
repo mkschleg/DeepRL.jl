@@ -1,84 +1,170 @@
 
 using Flux
 using Random
+using BSON
+using MinimalRLCore
 
-mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ERP} <: AbstractAgent
+Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractReplay} <: AbstractAgent
     model::M
     target_network::TN
-    opt::O
     lu::LU
+    opt::O
     ap::AP
-    er::ExperienceReplay{ERP}
-    γ::Float32
-    batch_size::Int64
-    tn_counter_init::Int64
-    target_network_counter::Int64
-    action::Int64
+    replay::ER
     prev_s::Φ
+    batch_size::Int = 32
+    target_update_freq::Int = 10000
+    update_freq::Int = 4
+    min_mem_size::Int = 10000
+    action::Int = 0
+    training_steps::Int = 0
+    INFO::Dict{Symbol, Any} = Dict{Symbol, Any}()
 end
 
-DQNAgent(model, target_network, opt, lu, ap, size_buffer, γ, batch_size, tn_counter_init, s) =
-    DQNAgent(model,
-             target_network,
-             opt,
-             lu,
-             ap,
-             ExperienceReplay(100000,
-                              (Array{Float32, 1}, Int64, Array{Float32, 1}, Float32, Bool),
-                              (:s, :a, :sp, :r, :t)),
-             γ,
-             batch_size,
-             tn_counter_init,
-             tn_counter_init,
-             0,
-             s)
+const ImageDQNAgent =
+    DQNAgent{M, TN, O, LU, AP, Φ, ER} where {M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractImageReplay}
+
+DQNAgent{Φ}(model,
+            target_network,
+            optimizer,
+            learning_update,
+            acting_policy,
+            replay,
+            feature_size,
+            batch_size,
+            target_update_freq,
+            update_freq,
+            min_mem_size) where {Φ <: Number} =
+                DQNAgent(model = model,
+                         target_network = target_network,
+                         lu = learning_update,
+                         opt = optimizer,
+                         ap = acting_policy,
+                         replay = replay,
+                         prev_s = zeros(Φ, feature_size),
+                         batch_size = batch_size,
+                         target_update_freq = target_update_freq,
+                         update_freq = update_freq,
+                         min_mem_size = min_mem_size)
+
+DQNAgent(model, target_network, optimizer, learning_update,
+         acting_policy, replay, feature_size,
+         batch_size, target_update_freq, update_freq,
+         min_mem_size) =
+             DQNAgent{Float32}(model,
+                               target_network,
+                               optimizer,
+                               learning_update,
+                               acting_policy,
+                               replay,
+                               feature_size,
+                               batch_size,
+                               target_update_freq,
+                               update_freq,
+                               min_mem_size)
 
 
-function RLCore.start!(agent::DQNAgent, env_s_tp1, rng::AbstractRNG; kwargs...)
-    # Start an Episode
-    agent.action = sample(agent.ap,
-                          agent.model(env_s_tp1),
-                          rng)
-    return agent.action
-end
+get_state(agent::DQNAgent, s) = s
+get_state(agent::ImageDQNAgent, s) =
+    agent.replay.img_norm(
+        reshape(getindex(agent.replay.image_buffer, s),
+                agent.replay.image_buffer.img_size..., agent.replay.hist,
+                1))
 
-function RLCore.step!(agent::DQNAgent, env_s_tp1, r, terminal, rng::AbstractRNG; kwargs...)
+warmup_replay(agent::DQNAgent, env_s_tp1) = env_s_tp1
+warmup_replay(agent::ImageDQNAgent, env_s_tp1) = add!(agent.replay, env_s_tp1)
+
+function MinimalRLCore.start!(agent::DQNAgent,
+                       env_s_tp1,
+                       rng::AbstractRNG)
     
-    add!(agent.er, (copy(Float32.(agent.prev_s)), agent.action, copy(Float32.(env_s_tp1)), r, terminal))
-    
-    if size(agent.er)[1] > 1000
-        e = sample(agent.er, agent.batch_size; rng=rng)
-        update_params!(agent, e)
-    end
-
-    
-    agent.prev_s .= env_s_tp1
-    agent.action = sample(agent.ap,
-                          agent.model(agent.prev_s),
-                          rng)
-
-    return agent.action
-end
-
-function update_params!(agent::DQNAgent, e)
-
-    if agent.tn_counter_init > 0
-        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t, agent.target_network)
-
-        if agent.target_network_counter == 1
-            agent.target_network_counter = agent.tn_counter_init
-            agent.target_network = mapleaves(
-                Flux.Tracker.data,
-                deepcopy(agent.model))
-        else
-            agent.target_network_counter -= 1
-        end
+    agent.prev_s .= if agent isa ImageDQNAgent
+        add!(agent.replay, env_s_tp1)
     else
-        update!(agent.model, agent.lu, agent.opt, e.s, e.a, e.sp, e.r, e.t)
+        env_s_tp1
     end
-    return nothing
-    
+
+    state = get_state(agent, agent.prev_s) |> gpu
+
+    agent.action = sample(agent.ap,
+                          agent.model(state),
+                          rng)
+
+    return agent.action
 end
 
+function MinimalRLCore.step!(agent::DQNAgent,
+                             env_s_tp1,
+                             r,
+                             terminal,
+                             rng::AbstractRNG)
+
+    
+    add_ret = add!(agent.replay,
+                   (agent.prev_s,
+                    findfirst((a)->a==agent.action,
+                              agent.ap.action_set)::Int,
+                    env_s_tp1,
+                    r,
+                    terminal))
+
+    update_params!(agent, rng)
+
+    agent.prev_s .= if agent isa ImageDQNAgent
+        add_ret
+    else
+        env_s_tp1
+    end
+
+    prev_s = get_state(agent, agent.prev_s) |> gpu
+
+    agent.action = sample(agent.ap,
+                          agent.model(prev_s),
+                          rng)
+
+    return agent.action
+end
+
+function update_params!(agent::DQNAgent, rng)
+    
+
+    if size(agent.replay)[1] > agent.min_mem_size
+        if agent.training_steps%agent.update_freq == 0
+
+            e = sample(agent.replay,
+                       agent.batch_size;
+                       rng=rng)
+            s = gpu(e.s)
+            r = gpu(e.r)
+            t = gpu(e.t)
+            sp = gpu(e.sp)
+            
+            ℒ = update!(agent.model,
+                        agent.lu,
+                        agent.opt,
+                        s,
+                        e.a,
+                        sp,
+                        r,
+                        t,
+                        agent.target_network)
+            # agent.INFO[:loss] = ℒ
+        end
+    end
+    
+    # Target network updates
+    if !(agent.target_network isa Nothing)
+        if agent.training_steps%agent.target_update_freq == 0
+            for ps ∈ zip(params(agent.model),
+                         params(agent.target_network))
+                ps[2] .= ps[1]
+            end
+        end
+    end
+
+    agent.training_steps += 1
+
+    return nothing    
+end
 
 

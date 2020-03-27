@@ -27,18 +27,19 @@ function construct_agent(s, num_actions)
                   Dense(128, 32, Flux.relu; initW=Flux.glorot_uniform),
                   Dense(32, num_actions; initW=Flux.glorot_uniform))
 
-    target_network = mapleaves(Flux.Tracker.data, deepcopy(model)::typeof(model))
+    target_network = deepcopy(model)
 
-    return DQNAgent(model,
-                    target_network,
-                    ADAM(0.001),
-                    QLearning(γ),
-                    ϵGreedy(ϵ),
-                    1000000,
-                    γ,
-                    batch_size,
-                    tn_counter_init,
-                    s)
+    return DQNAgent{Float32}(model,
+                             target_network,
+                             ADAM(0.001),
+                             QLearning(γ),
+                             ϵGreedy(ϵ, num_actions),
+                             ExperienceReplay(100000),
+                             length(s),
+                             batch_size,
+                             tn_counter_init,
+                             1,
+                             1000)
 end
 
 
@@ -50,14 +51,21 @@ function plot_layers(agent::DQNAgent, data_range)
 
 end
 
+flat(xs) = reduce(vcat, vec.(xs))
 
-function episode!(env, agent, rng, max_steps)
+function episode!(env, agent, rng, max_steps; callback=nothing)
     terminal = false
     s_t = start!(env, rng)
     action = start!(agent, s_t, rng)
 
+    if !(callback isa Nothing)
+        callback(agent, env, (s_t, nothing, nothing))
+    end
+    
     total_rew = 0
     steps = 0
+
+    
 
     while !terminal
         
@@ -66,12 +74,17 @@ function episode!(env, agent, rng, max_steps)
         action = step!(agent, s_tp1, rew, terminal, rng)
         total_rew += rew
         steps += 1
+
+        if !(callback isa Nothing)
+            callback(agent, env, (s_tp1, rew, terminal))
+        end
         
         if steps == max_steps
             break
         end
-        
     end
+
+    @info "" total_reward = total_rew
     return total_rew, steps
 end
 
@@ -97,13 +110,25 @@ function main_experiment(seed, num_episodes)
         dt=0.01,
         desc="Episode:",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
-        barlen=Int64(floor(500/length(front))))
+        barlen=Int64(floor(num_episodes/length(front))))
 
     data_range = collect.(collect(Iterators.product(-1.0:0.01:1.0, -1.0:0.01:1.0)))
-    # with_logger(lg) do
-    for e in 1:num_episodes
-        total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 50000)
-        next!(p)        
+
+    with_logger(lg) do
+
+        cb(ag, env, state_tuple) = begin
+            @info "" training_loss = agent.INFO[:training_loss]
+            if state_tuple[2] == nothing
+                # @info "" network_params = flat(params(agent.model))
+                 
+            end
+        end
+        
+        # @info "" x = 10
+        for e in 1:num_episodes
+            total_rews[e], steps[e] = episode!(mc, agent, Random.GLOBAL_RNG, 5000)
+            next!(p)
+        end
     end
 
     # end
