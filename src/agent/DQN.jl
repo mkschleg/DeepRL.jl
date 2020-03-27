@@ -5,17 +5,27 @@ using BSON
 using MinimalRLCore
 
 Base.@kwdef mutable struct DQNAgent{M, TN, O, LU, AP<:AbstractValuePolicy, Φ, ER<:AbstractReplay} <: AbstractAgent
+    # Models
     model::M
     target_network::TN
+
+    # Learning
     lu::LU
     opt::O
-    ap::AP
     replay::ER
+    
+    # Acting policy (Abstract Value Policy)
+    ap::AP
+
+    # extra
     prev_s::Φ
+    
+    # params
     batch_size::Int = 32
     target_update_freq::Int = 10000
     update_freq::Int = 4
     min_mem_size::Int = 10000
+    
     action::Int = 0
     training_steps::Int = 0
     INFO::Dict{Symbol, Any} = Dict{Symbol, Any}()
@@ -39,8 +49,8 @@ DQNAgent{Φ}(model,
                          target_network = target_network,
                          lu = learning_update,
                          opt = optimizer,
-                         ap = acting_policy,
                          replay = replay,
+                         ap = acting_policy,
                          prev_s = zeros(Φ, feature_size),
                          batch_size = batch_size,
                          target_update_freq = target_update_freq,
@@ -76,15 +86,11 @@ warmup_replay(agent::ImageDQNAgent, env_s_tp1) = add!(agent.replay, env_s_tp1)
 
 function MinimalRLCore.start!(agent::DQNAgent,
                        env_s_tp1,
-                       rng::AbstractRNG)
-    
-    agent.prev_s .= if agent isa ImageDQNAgent
-        add!(agent.replay, env_s_tp1)
-    else
-        env_s_tp1
-    end
+                       rng::AbstractRNG=Random.GLOBAL_RNG)
 
-    state = get_state(agent, agent.prev_s) |> gpu
+    agent.prev_s = warmup(agent.replay, env_s_tp1)
+    
+    state = get_state(agent, agent.prev_s) #|> gpu
 
     agent.action = sample(agent.ap,
                           agent.model(state),
@@ -97,7 +103,7 @@ function MinimalRLCore.step!(agent::DQNAgent,
                              env_s_tp1,
                              r,
                              terminal,
-                             rng::AbstractRNG)
+                             rng::AbstractRNG=Random.GLOBAL_RNG)
 
     
     add_ret = add!(agent.replay,

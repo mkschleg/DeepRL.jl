@@ -14,16 +14,14 @@ mutable struct ExperienceReplay{CB<:CircularBuffer, SB} <: AbstractReplay
     state_buffer::SB
 end
 
-ExperimentReplay(size, types, shapes, column_names) =
-    ExperimentReplay(CircularBuffer(size, types, shapes, column_names), nothing)
+ExperienceReplay(size, types, shapes, column_names) =
+    ExperienceReplay(CircularBuffer(size, types, shapes, column_names), nothing)
 
 ExperienceReplay(size, obs_size, obs_type=Float32) =
     ExperienceReplay(size,
                      (obs_type, Int, obs_type, Float32, Bool),
                      (obs_size, 1, obs_size, 1, 1),
                      (:s, :a, :sp, :r, :t))
-
-ExperienceReplay
 
 size(er::ExperienceReplay) = size(er.buffer)
 @forward ExperienceReplay.buffer getindex
@@ -34,6 +32,9 @@ function sample(er::ExperienceReplay, batch_size::Int; rng=Random.GLOBAL_RNG)
     idx = rand(rng, 1:size(er), batch_size)
     return getindex(er, idx)
 end
+
+warmup(er::ExperienceReplay, x) = x
+
 
 mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
     buffer::CB
@@ -56,6 +57,8 @@ function sample(er::OnlineReplay, batch_size; rng=Random.GLOBAL_RNG)
     @assert batch_size <= size(er.buffer)[1]
     return er[(end-batch_size+1):end]
 end
+
+warmup(er::OnlineReplay, x) = x
 
 mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedReplay
     buffer::CB

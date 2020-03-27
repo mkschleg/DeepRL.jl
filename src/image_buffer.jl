@@ -12,12 +12,12 @@ A cicular buffer for images.
 - `image_manip`: A function (or callable object) which takes the raw image and returns the pre-processed image (returning UInt8 arrays).
 
 """
-mutable struct StateBuffer{A<:AbstractArray{UInt8}, TPL<:Tuple}
+mutable struct StateBuffer{A<:AbstractArray{I}, I<:Number, S}
     img_buffer::A
     cur_idx::Int
     capacity::Int
     full::Bool
-    img_size::TPL
+    img_size::S
 end
 
 ImageBuffer(size::Int, img_size) = 
@@ -51,11 +51,11 @@ function view_add!(imb::StateBuffer, img)
     return view(imb, idx)
 end
 
-getindex(imb::StateBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, :, idx)
-Base.view(imb::StateBuffer{A, IM, Tuple{Int, Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, :, idx)
+getindex(imb::StateBuffer{A, Tuple{Int, Int, Int}}, idx) where {A} = getindex(imb.img_buffer, :, :, :, idx)
+Base.view(imb::StateBuffer{A, Tuple{Int, Int, Int}}, idx) where {A} = view(imb.img_buffer, :, :, :, idx)
 
-getindex(imb::StateBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = getindex(imb.img_buffer, :, :, idx)
-Base.view(imb::StateBuffer{A, IM, Tuple{Int, Int}}, idx) where {A, IM} = view(imb.img_buffer, :, :, idx)
+getindex(imb::StateBuffer{A, Tuple{Int, Int}}, idx) where {A} = getindex(imb.img_buffer, :, :, idx)
+Base.view(imb::StateBuffer{A, Tuple{Int, Int}}, idx) where {A} = view(imb.img_buffer, :, :, idx)
 
 abstract type AbstractImageReplay <: AbstractReplay end
 
@@ -69,62 +69,62 @@ This is a experience replay buffer designed for managing a history of images. Cu
 - `image_norm`: Function (or callable object) which takes the processed image and returns the normalized image (type Array{Float32}).
 
 """
-struct HistImageReplay{ER<:AbstractReplay, IB<:ImageBuffer, IN} <: AbstractImageReplay
-    exp_replay::ER
-    image_buffer::IB
-    img_norm::IN
-    hist::Int
-    cur_state::Array{Int, 1}
-    s::Array{Float32, 4}
-    sp::Array{Float32, 4}
-end
+# struct HistImageReplay{ER<:AbstractReplay, IB<:ImageBuffer, IN} <: AbstractImageReplay
+#     exp_replay::ER
+#     image_buffer::IB
+#     img_norm::IN
+#     hist::Int
+#     cur_state::Array{Int, 1}
+#     s::Array{Float32, 4}
+#     sp::Array{Float32, 4}
+# end
 
-function HistImageReplay(size, img_size::Tuple{Int, Int}, img_manip, img_norm, hist, batchsize)
-    er = ExperienceReplay(size,
-                          (Array{Int, 1}, Int, Array{Int, 1}, Float32, Bool),
-                          (:s, :a, :sp, :r, :t))
-    imb = ImageBuffer(size + 2*hist, img_manip, img_size)
-    HistImageReplay(
-        er,
-        imb,
-        img_norm,
-        hist,
-        ones(Int64, hist),
-        zeros(Float32, img_size..., hist, batchsize),
-        zeros(Float32, img_size..., hist, batchsize))
-end
+# function HistImageReplay(size, img_size::Tuple{Int, Int}, img_manip, img_norm, hist, batchsize)
+#     er = ExperienceReplay(size,
+#                           (Array{Int, 1}, Int, Array{Int, 1}, Float32, Bool),
+#                           (:s, :a, :sp, :r, :t))
+#     imb = ImageBuffer(size + 2*hist, img_manip, img_size)
+#     HistImageReplay(
+#         er,
+#         imb,
+#         img_norm,
+#         hist,
+#         ones(Int64, hist),
+#         zeros(Float32, img_size..., hist, batchsize),
+#         zeros(Float32, img_size..., hist, batchsize))
+# end
 
 
-size(er::HistImageReplay) = size(er.exp_replay)
+# size(er::HistImageReplay) = size(er.exp_replay)
 
-function add!(er::HistImageReplay, state::Array{UInt8})
-    idx = add!(er.image_buffer, state)
-    er.cur_state .= idx
-end
+# function add!(er::HistImageReplay, state::Array{UInt8})
+#     idx = add!(er.image_buffer, state)
+#     er.cur_state .= idx
+# end
 
-"""
-    add!(er::HistImageReplay, exp_tuple)
+# """
+#     add!(er::HistImageReplay, exp_tuple)
 
-# Arguments
-- `transition::Tuple`: A transition tuple (s, a, sp, r, t)
-"""
-function add!(er::HistImageReplay, transition::TPL) where {TPL<:Tuple}
-    sp_img = transition[3]
-    idx = add!(er.image_buffer, sp_img)
-    s = copy(er.cur_state)
-    sp = [[idx]; er.cur_state[1:3]]
-    add!(er.exp_replay, (s, transition[2], sp, transition[4], transition[5]))
-    er.cur_state .= sp
-end
+# # Arguments
+# - `transition::Tuple`: A transition tuple (s, a, sp, r, t)
+# """
+# function add!(er::HistImageReplay, transition::TPL) where {TPL<:Tuple}
+#     sp_img = transition[3]
+#     idx = add!(er.image_buffer, sp_img)
+#     s = copy(er.cur_state)
+#     sp = [[idx]; er.cur_state[1:3]]
+#     add!(er.exp_replay, (s, transition[2], sp, transition[4], transition[5]))
+#     er.cur_state .= sp
+# end
 
-function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
+# function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
 
-    rows = sample(er.exp_replay, batch_size; rng=rng)
-    for i = 1:batch_size
-        er.s[:, :, :, i] .= er.img_norm(er.image_buffer[rows.s[i]])
-        er.sp[ :, :, :, i] .= er.img_norm(er.image_buffer[rows.sp[i]])
-    end
+#     rows = sample(er.exp_replay, batch_size; rng=rng)
+#     for i = 1:batch_size
+#         er.s[:, :, :, i] .= er.img_norm(er.image_buffer[rows.s[i]])
+#         er.sp[ :, :, :, i] .= er.img_norm(er.image_buffer[rows.sp[i]])
+#     end
 
-    return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
-end
+#     return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
+# end
 

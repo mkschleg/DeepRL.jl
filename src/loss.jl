@@ -44,17 +44,18 @@ Flux.Zygote.@nograd get_cart_idx
 
 function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     
-    action_idx = get_cart_idx(a_t, length(terminal))
     q_tp1 = if target_model isa Nothing
-        dropgrad(maximum(model(s_tp1); dims=1)[1, :])
+        maximum(model(s_tp1); dims=1)[1, :]
     else
-        dropgrad(maximum(target_model(s_tp1); dims=1)[1, :])
+        maximum(target_model(s_tp1); dims=1)[1, :]
     end
-    q_t = @view model(s_t)[action_idx]
-    targets = dropgrad(r .+ (1 .- terminal).*lu.γ.*q_tp1)
+    targets = dropgrad(r + lu.γ*(one(lu.γ) .- terminal).*q_tp1)
+
+    action_idx = get_cart_idx(a_t, length(terminal))
+    q_t = model(s_t)[action_idx]
+    
     return lu.loss(q_t, targets)
 end
-
 
 
 function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
@@ -81,23 +82,23 @@ end
 
 struct TDLearning end
 
-function loss(lu::TDLearning, model, s_t, a_t, s_tp1, r, terminal, target_model, horde::H) where {H<:Horde}
+# function loss(lu::TDLearning, model, s_t, a_t, s_tp1, r, terminal, target_model, horde::H) where {H<:Horde}
 
-    # get GVF horde parameters
+#     # get GVF horde parameters
 
-    p = [RLCore.get(horde, s_t[:,i], a_t, s_tp1[:,i]) for i in 1:length(terminal)]
+#     p = [RLCore.get(horde, s_t[:,i], a_t, s_tp1[:,i]) for i in 1:length(terminal)]
 
-    c = hcat(getindex.(p, 1)...)
-    γ = hcat(getindex.(p, 2)...)
-    π = hcat(getindex.(p, 3)...)
+#     c = hcat(getindex.(p, 1)...)
+#     γ = hcat(getindex.(p, 2)...)
+#     π = hcat(getindex.(p, 3)...)
 
-    v_t = model(s_t)
-    v_tp1 = target_model(s_tp1)
+#     v_t = model(s_t)
+#     v_tp1 = target_model(s_tp1)
 
-    target = dropgrad(c .+ γ.*v_tp1) # -> Matrix (preds × batch_size)
+#     target = dropgrad(c .+ γ.*v_tp1) # -> Matrix (preds × batch_size)
 
-    return sum((target .- v_t).^2) * (1 // length(terminal))
-end
+#     return sum((target .- v_t).^2) * (1 // length(terminal))
+# end
 
-loss(lu::TDLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing, horde::H) where {H<:Horde} = 
-    loss(lu, model, s_t, a_t, s_tp1, r, terminal, (x)->Flux.data(model(x)), horde)
+# loss(lu::TDLearning, model, s_t, a_t, s_tp1, r, terminal, target_model::Nothing, horde::H) where {H<:Horde} = 
+#     loss(lu, model, s_t, a_t, s_tp1, r, terminal, (x)->Flux.data(model(x)), horde)
