@@ -53,7 +53,8 @@ function DQNAgent(model,
                   update_freq,
                   min_mem_size;
                   device = Val{:cpu}(),
-                  state_processor = identity)
+                  state_processor = identity,
+                  hist_squeeze=false)
 
     proc_state = state_processor(example_state)
     
@@ -61,7 +62,7 @@ function DQNAgent(model,
     state_buffer = if hist_length == 1
         DeepRL.StateBuffer{eltype(proc_state)}(replay_size, length(proc_state))
     else
-        DeepRL.HistStateBuffer{eltype(proc_state)}(replay_size, length(proc_state), hist_length)
+        DeepRL.HistStateBuffer{eltype(proc_state)}(replay_size, length(proc_state), hist_length, hist_squeeze)
     end
     
     prev_s = if state_buffer isa Nothing
@@ -99,7 +100,7 @@ function process_state(agent::DQNAgent, s)
         agent.state_processor(s)
     else
         push!(agent.state_buffer, agent.state_processor(s))
-        lastindex(agent.state_buffer)
+        laststate(agent.state_buffer)
     end
 end
 
@@ -168,7 +169,6 @@ function update_params!(agent::DQNAgent, rng)
             t = to_device(agent.device, e.t)
             sp = get_state(agent, e.sp)
 
-            
             ℒ = update!(agent.model,
                         agent.learning_update,
                         agent.optimizer,

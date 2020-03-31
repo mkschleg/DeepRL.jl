@@ -21,11 +21,12 @@ function construct_agent(s, num_actions)
     update_freq=1
     min_mem_size=1000
     er_size = 10000
+    hist = 1
 
-    model = Chain(Dense(length(s), 128, Flux.relu),
+    model = Chain(Dense(length(s)*hist, 128, Flux.relu),
                   # Dense(128, 128, Flux.relu),
-                  Dense(128, 32, Flux.relu),
-                  Dense(32, num_actions))
+                  # Dense(128, 32, Flux.relu),
+                  Dense(128, num_actions))
 
     @show length(s)
     # er = DeepRL.ExperienceReplayDef(er_size, 1, Int, DeepRL.StateBuffer{Float32}(er_size, length(s)))
@@ -39,12 +40,13 @@ function construct_agent(s, num_actions)
         DeepRL.RMSPropTFCentered(0.001),
         ϵGreedy(ϵ, num_actions),
         er_size,
-        1,
+        hist,
         s,
         batch_size,
         tn_update_freq,
         update_freq,
-        min_mem_size
+        min_mem_size,
+        hist_squeeze = Val{true}()
     )
 
     
