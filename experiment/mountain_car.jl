@@ -28,20 +28,38 @@ function construct_agent(s, num_actions)
                   Dense(32, num_actions))
 
     @show length(s)
-    er = ExperienceReplay(er_size, length(s))
+    # er = DeepRL.ExperienceReplayDef(er_size, 1, Int, DeepRL.StateBuffer{Float32}(er_size, length(s)))
     target_network = deepcopy(model)
 
-    return DQNAgent{Float32}(model,
-                             target_network,
-                             DeepRL.RMSPropTFCentered(0.001),
-                             QLearning(γ, Flux.mse),
-                             ϵGreedy(ϵ, num_actions),
-                             er,
-                             length(s),
-                             batch_size,
-                             tn_update_freq,
-                             update_freq,
-                             min_mem_size)
+
+    return DQNAgent(
+        model,
+        target_network,
+        QLearning(γ, Flux.mse),
+        DeepRL.RMSPropTFCentered(0.001),
+        ϵGreedy(ϵ, num_actions),
+        er_size,
+        1,
+        s,
+        batch_size,
+        tn_update_freq,
+        update_freq,
+        min_mem_size
+    )
+
+    
+    # return DQNAgent{Int}(model,
+    #                      target_network,
+    #                      DeepRL.RMSPropTFCentered(0.001),
+    #                      QLearning(γ, Flux.mse),
+    #                      ϵGreedy(ϵ, num_actions),
+    #                      er,
+    #                      1,
+    #                      # length(s),
+    #                      batch_size,
+    #                      tn_update_freq,
+    #                      update_freq,
+    #                      min_mem_size)
 end
 
 
@@ -69,11 +87,12 @@ function main_experiment(seed, max_num_steps)
 
     eps = 1
     while sum(steps) < max_num_steps
-
+        cur_step = 0
         episode_cut_off = min(max_episode_length, max_num_steps - sum(steps))
         tr, stp =
             run_episode!(mc, agent, episode_cut_off, rng) do (s, a, s′, r)
-               next!(p, showvalues=[(:episode, eps)])
+                cur_step+=1
+               next!(p, showvalues=[(:step, sum(steps)+cur_step), (:episode, eps)])
             end
         push!(total_rews, tr)
         push!(steps, stp)

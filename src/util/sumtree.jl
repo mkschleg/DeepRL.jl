@@ -1,6 +1,6 @@
 
 import Random
-import Base.getindex, Base.size, Base.eltype
+# import Base.getindex, Base.size, Base.eltype
 
 mutable struct SumTree{T}
     capacity::Int64
@@ -19,9 +19,9 @@ mutable struct SumTree{T}
 end
 
 total(tree::SumTree) = tree.tree_struct[1]
-size(tree::SumTree) = tree.size
+Base.size(tree::SumTree) = tree.size
 capacity(tree::SumTree) = tree.capacity
-eltype(tree::SumTree) = typeof(tree.data[1])
+Base.eltype(tree::SumTree) = typeof(tree.data[1])
 randInRange(a, b, size=1; rng=Random.GLOBAL_RNG) = (rand(rng, length(a), size).*(b-a)).+a
 
 function update!(tree::SumTree, idx, weight)
@@ -60,7 +60,7 @@ function get(tree::SumTree, s)
     return idx + 1, tree.tree_struct[idx + 1], tree.data[data_idx + 1]
 end
 
-function getindex(tree::SumTree, idx::Int64)
+function Base.getindex(tree::SumTree, idx::Int64)
     tree_idx = (idx - 1) + tree.capacity - 1
     return tree.tree_struct[tree_idx + 1], tree.data[idx]
 end

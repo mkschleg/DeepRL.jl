@@ -1,11 +1,9 @@
-import Base.size, Base.getindex
-
 """
 CircularBuffer
 
     Maintains a buffer of fixed size w/o reallocating and deallocating memory through a circular queue data struct.
 """
-mutable struct CircularBuffer{TPL, NTPL}
+mutable struct CircularBuffer{TPL, TPS, NAMES}
     """The structure the data is stored"""
     _stg_tuple::TPL
     """Current column."""
@@ -15,18 +13,19 @@ mutable struct CircularBuffer{TPL, NTPL}
     """Whether the datastruct is full (i.e. has gone through a single rotation)"""
     _full::Bool
     """Data_types of the data stored in the buffer."""
-    _data_types::Array{DataType, 1}
+    _data_types::TPS
     """Names"""
-    _names::NTPL
+    # _names::NTPL
+    function CircularBuffer(size, types, shapes, column_names)
+        @assert length(types) == length(shapes)
+        @assert length(types) == length(column_names)
+    
+        data = NamedTuple{column_names}(shapes[i] == 1 ? zeros(types[i], size) : zeros(types[i], shapes[i]..., size) for i in 1:length(types))
+        return new{typeof(data), typeof(types), column_names}(data, 1, size, false, types)
+    end
 end
 
-function CircularBuffer(size, types, shapes, column_names)
-    @assert length(types) == length(shapes)
-    @assert length(types) == length(column_names)
-    
-    data = Tuple(shapes[i] == 1 ? zeros(types[i], size) : zeros(types[i], shapes[i]..., size) for i in 1:length(types))
-    CircularBuffer(data, 1, size, false, collect(types), column_names)
-end
+
 
 
 _get_data_row(x::Array{T, 1}, idx) where {T} = x[idx]
@@ -76,7 +75,7 @@ end
     If the full flag is true then we return the size of the whole data frame.
 
 """
-function size(buffer::CircularBuffer)
+function Base.length(buffer::CircularBuffer)
     if buffer._full
         buffer._capacity
     else
@@ -89,10 +88,11 @@ end
 
     returns the max number of elements the buffer can store.
 """
-capacity(buffer::CB) where {CB<:CircularBuffer} = buffer._capacity
+capacity(buffer::CircularBuffer) = buffer._capacity
 
-Base.getindex(buffer::CircularBuffer, idx) =
-    NamedTuple{buffer._names}(_get_data_row(buffer._stg_tuple[i], idx) for i in 1:length(buffer._names))
+function Base.getindex(buffer::CircularBuffer{TPL, TPS, NAMES}, idx) where {TPL, TPS, NAMES}
+    NamedTuple{NAMES}(_get_data_row(buffer._stg_tuple[i], idx) for i in 1:length(NAMES))
+end
 
 Base.view(buffer::CircularBuffer, idx) =
     NamedTuple{buffer._names}(_get_data_row_view(buffer._stg_tuple[i], idx) for i in 1:length(buffer._names))

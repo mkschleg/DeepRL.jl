@@ -2,38 +2,49 @@ include("util/buffer.jl")
 include("util/sumtree.jl")
 
 import Random
-import Base.getindex, Base.size
+# import Base.getindex, Base.size
 import DataStructures
 
 abstract type AbstractReplay end
 
 abstract type AbstractWeightedReplay <: AbstractReplay end
 
-mutable struct ExperienceReplay{CB<:CircularBuffer, SB} <: AbstractReplay
+mutable struct ExperienceReplay{CB} <: AbstractReplay
     buffer::CB
-    state_buffer::SB
 end
 
-ExperienceReplay(size, types, shapes, column_names) =
-    ExperienceReplay(CircularBuffer(size, types, shapes, column_names), nothing)
+ExperienceReplay(size, types, shapes, column_names) = begin
+    cb = CircularBuffer(size, types, shapes, column_names)
+    ExperienceReplay(cb)
+end
 
-ExperienceReplay(size, obs_size, obs_type=Float32) =
+ExperienceReplayDef(size, obs_size, obs_type) =
     ExperienceReplay(size,
                      (obs_type, Int, obs_type, Float32, Bool),
                      (obs_size, 1, obs_size, 1, 1),
                      (:s, :a, :sp, :r, :t))
 
-size(er::ExperienceReplay) = size(er.buffer)
-@forward ExperienceReplay.buffer getindex
+Base.length(er::ExperienceReplay) = length(er.buffer)
+Base.getindex(er::ExperienceReplay, idx) = er.buffer[idx]
 
-add!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
+add_exp!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
 
-function sample(er::ExperienceReplay, batch_size::Int; rng=Random.GLOBAL_RNG)
-    idx = rand(rng, 1:size(er), batch_size)
-    return getindex(er, idx)
+sample(er::ExperienceReplay, batch_size) = sample(Random.GLOBAL_RNG, er, batch_size)
+
+function sample(rng::Random.AbstractRNG, er::ExperienceReplay, batch_size)
+    idx = rand(rng, 1:length(er), batch_size)
+    return er[idx]
 end
 
-warmup(er::ExperienceReplay, x) = x
+# warmup(er::ExperienceReplay{CB, Nothing}, x) where {CB} = x
+# warmup(er::ExperienceReplay, x) = begin
+#     push!(er.state_buffer, x)
+#     lastindex(er.state_buffer)
+# end
+
+# get_state(er::ExperienceReplay{CB, Nothing}, x) where {CB} = x
+# get_state(er::ExperienceReplay, x) = er.state_buffer[x]
+
 
 
 mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay

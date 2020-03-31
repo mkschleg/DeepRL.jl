@@ -18,10 +18,27 @@ struct DoubleQLearning{F} <: AbstractQLearning
     γ::Float32
     loss::F
 end
-
 DoubleQLearningHuberLoss(γ) = DoubleQLearning(Float32(γ), mean_huber_loss)
 
 include("loss.jl")
+
+function update!(model,
+                 lu::AbstractQLearning,
+                 opt,
+                 s_t,
+                 a_t,
+                 s_tp1,
+                 r,
+                 terminal,
+                 target_model)
+
+    ps = params(model)
+    gs = gradient(ps) do
+        loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+    end
+    Flux.Optimise.update!(opt, ps, gs)
+    return 0.0f0
+end
 
 function update!(model,
                  lu::T,
@@ -36,24 +53,7 @@ function update!(model,
 end
 
 
-function update!(model,
-                 lu::LU,
-                 opt,
-                 s_t::A,
-                 a_t,
-                 s_tp1::A,
-                 r,
-                 terminal,
-                 target_model) where {LU<:AbstractQLearning, F<:AbstractFloat, A<:AbstractArray{F}}
 
-    ps = params(model)
-    ℒ = 0.0f0
-    gs = gradient(ps) do
-        ℒ = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
-    end
-    Flux.Optimise.update!(opt, ps, gs)
-    return ℒ
-end
 
 
 
