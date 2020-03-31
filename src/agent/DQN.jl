@@ -93,54 +93,6 @@ function DQNAgent(model,
     
 end
 
-    
-# DQNAgent{Φ}(model,
-#             target_network,
-#             optimizer,
-#             learning_update,
-#             acting_policy,
-#             replay,
-#             feature_size,
-#             batch_size,
-#             target_update_freq,
-#             update_freq,
-#             min_mem_size,
-#             device = Flux.use_cuda[] ? Val{:gpu}() : Val{:cpu}()) where {Φ <: Number} =
-#                 DQNAgent(model = model,
-#                          target_network = target_network,
-#                          learning_update = learning_update,
-#                          optimizer = optimizer,
-#                          replay = replay,
-#                          ap = acting_policy,
-#                          prev_s = feature_size == 1 ? zero(Φ) : zeros(Φ, feature_size),
-#                          device = device,
-#                          batch_size = batch_size,
-#                          target_update_freq = target_update_freq,
-#                          update_freq = update_freq,
-#                          min_mem_size = min_mem_size)
-
-# DQNAgent{Φ}(model, target_network, ; kwargs...) where {Φ <: Number}
-
-# DQNAgent(args...; kwargs...) = DQNAgent{Float32}(args...; kwargs...)
-
-# DQNAgent(model, target_network, optimizer, learning_update,
-#          acting_policy, replay, feature_size,
-#          batch_size, target_update_freq, update_freq,
-#          min_mem_size, device = Flux.use_cuda[] ? Val(:gpu) : Val(:cpu)) =
-#              DQNAgent{Float32}(model,
-#                                target_network,
-#                                optimizer,
-#                                learning_update,
-#                                acting_policy,
-#                                replay,
-#                                feature_size,
-#                                batch_size,
-#                                target_update_freq,
-#                                update_freq,
-#                                min_mem_size,
-#                                device)
-
-
 function process_state(agent::DQNAgent, s)
     # this stores the state in the state buffer (if not Nothing) and preproccesses the state.
     if agent.state_buffer isa Nothing
@@ -226,7 +178,6 @@ function update_params!(agent::DQNAgent, rng)
                         r,
                         t,
                         agent.target_network)
-            # agent.INFO[:loss] = ℒ
         end
     end
     
