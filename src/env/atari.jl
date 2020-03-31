@@ -143,12 +143,12 @@ function MinimalRLCore.start!(env::Atari)
     ALE.reset_game(env.ale)
     env.lives = 0
     env.died = false
-    env.reward = 0
+    env.reward = 0.0f0
     env.score = 0
     update_state!(env, 2)
 end
 
-MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env; kwargs...)
+MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env)
 
 function MinimalRLCore.environment_step!(env::Atari, action)
 

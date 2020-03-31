@@ -9,7 +9,7 @@ import MacroTools: @forward
 
 export ExperienceReplay,
     WeightedExperienceReplay, OnlineReplay,
-    size, getindex, add!, sample
+    getindex, add!, sample
 
 include("state_buffer.jl")
 include("replay.jl")

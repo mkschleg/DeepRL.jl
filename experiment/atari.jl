@@ -8,7 +8,7 @@ using TensorBoardLogger
 using Logging
 using LinearAlgebra
 using BSON: @save
-using Distributions
+# using Distributions
 
 flatten(x) = reshape(x, :, size(x, 4))
 
@@ -20,7 +20,7 @@ function construct_agent(env)
     buffer_size = 1000000
     tn_update_freq= 8000
     hist_length = 4
-    update_wait = 4
+    update_freq = 4
     min_mem_size = 20000
 
     
@@ -29,16 +29,20 @@ function construct_agent(env)
     squared_grad_term = 0.95
     min_grad_term = 1e-5
 
-    image_replay = DeepRL.HistImageReplay(buffer_size,
-                                          (84,84),
-                                          DeepRL.image_manip_atari,
-                                          DeepRL.image_norm,
-                                          hist_length,
-                                          batch_size)
+    # image_replay = DeepRL.HistImageReplay(buffer_size,
+    #                                       (84,84),
+    #                                       DeepRL.image_manip_atari,
+    #                                       DeepRL.image_norm,
+    #                                       hist_length,
+    #                                       batch_size)
 
+    example_state = MinimalRLCore.get_state(env)
+
+    
     init_f = Flux.glorot_uniform
+    
     model = Chain(
-        Conv((8,8), 4=>32, relu, stride=4, init=init_f),
+        Conv((8,8), hist_length=>32, relu, stride=4, init=init_f),
         Conv((4,4), 32=>64, relu, stride=2, init=init_f),
         Conv((3,3), 64=>64, relu, stride=1, init=init_f),
         flatten,
@@ -46,23 +50,28 @@ function construct_agent(env)
         Dense(512, length(get_actions(env)), identity, initW=init_f)) |> gpu
 
     target_network  = deepcopy(model)
-    
-    agent = DQNAgent{Int}(model,
-                          target_network,
-                          DeepRL.RMSPropTFCentered(learning_rate,
-                                                   squared_grad_term,
-                                                   momentum_term,
-                                                   min_grad_term),
-                          QLearningHuberLoss(γ),
-                          DeepRL.ϵGreedyDecay((1.0, 0.01), 250000, min_mem_size, get_actions(env)),
-                          image_replay,
-                          hist_length,
-                          batch_size,
-                          tn_update_freq,
-                          update_wait,
-                          min_mem_size)
 
-    return agent
+
+    return DQNAgent(
+        model,
+        target_network,
+        QLearningHuberLoss(γ),
+        DeepRL.RMSPropTFCentered(learning_rate,
+                                 squared_grad_term,
+                                 momentum_term,
+                                 min_grad_term),
+        DeepRL.ϵGreedyDecay((1.0, 0.01), 250000, min_mem_size, get_actions(env)),
+        buffer_size,
+        hist_length,
+        example_state,
+        batch_size,
+        tn_update_freq,
+        update_freq,
+        min_mem_size;
+        hist_squeeze = Val{false}(),
+        state_preproc = DeepRL.image_manip_atari,
+        state_postproc = DeepRL.image_norm
+    )
 end
 
 
@@ -110,10 +119,10 @@ end
 
 function main_experiment(seed,
                          num_frames,
-                         save_loc;
+                         save_loc,
+                         checkin_step;
                          gamename="breakout",
-                         prog_meter_offset=0,
-                         checkin_step)
+                         prog_meter_offset=0)
 
     save_loc = joinpath(save_loc, "run_$(seed)")
     if !isdir(save_loc)

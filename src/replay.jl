@@ -55,7 +55,7 @@ end
 OnlineReplay(size, types, column_names) =
     OnlineReplay(DataStructures.CircularBuffer{Tuple{types...}}(size), tuple(column_names...))
 
-size(er::OnlineReplay) = size(er.buffer)
+# size(er::OnlineReplay) = size(er.buffer)
 @forward OnlineReplay.buffer Base.lastindex
 function getindex(er::OnlineReplay, idx)
     data = er.buffer[idx]
@@ -80,7 +80,7 @@ WeightedExperienceReplay(size, types, column_names) =
     new(CircularBuffer(size, types, column_names),
         SumTree{Int64}(size))
 
-size(er::WeightedExperienceReplay) = size(er.buffer)
+# size(er::WeightedExperienceReplay) = size(er.buffer)
 @forward WeightedExperienceReplay.buffer getindex
 
 function add!(er::WeightedExperienceReplay, experience, weight)
