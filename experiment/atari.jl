@@ -61,7 +61,8 @@ function construct_agent(env)
         min_mem_size;
         hist_squeeze = Val{false}(),
         state_preproc = DeepRL.image_manip_atari,
-        state_postproc = DeepRL.image_norm
+        state_postproc = DeepRL.image_norm,
+        device = Flux.use_cuda[] ? Val{:gpu}() : Val{:cpu}()
     )
 end
 
@@ -138,7 +139,7 @@ function main_experiment(seed,
     front = ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇']
     p = ProgressMeter.Progress(
         num_frames;
-        dt=0.01,
+        dt=1,
         desc="Step: ",
         barglyphs=ProgressMeter.BarGlyphs('|','█',front,' ','|'),
         barlen=Int64(floor(100/length(front))),

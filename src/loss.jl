@@ -53,7 +53,6 @@ function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
 
     action_idx = get_cart_idx(a_t, length(terminal))
     q_t = model(s_t)[action_idx]
-    
     return lu.loss(q_t, targets)
 end
 
@@ -75,7 +74,7 @@ function loss(lu::DoubleQLearning, model, s_t, a_t, s_tp1, r, terminal, target_m
     
     target = dropgrad(r .+ γ.*q_tp1)
     q_t = model(s_t)[action_idx]
-    
+
     return lu.loss(q_t, target)
 end
 
