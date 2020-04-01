@@ -120,7 +120,7 @@ function MinimalRLCore.start!(agent::DQNAgent,
                        env_s_tp1,
                        rng::AbstractRNG=Random.GLOBAL_RNG)
 
-    agent.prev_s = process_state(agent, env_s_tp1)
+    agent.prev_s .= process_state(agent, env_s_tp1)
     state = get_state(agent, agent.prev_s)
     resh_state = reshape(state, size(state)..., 1)
 
@@ -138,7 +138,6 @@ function MinimalRLCore.step!(agent::DQNAgent,
                              rng::AbstractRNG=Random.GLOBAL_RNG)
 
     proc_state = process_state(agent, env_s_tp1)
-
     add_ret = add_exp!(agent.replay,
                        (agent.prev_s,
                         findfirst((a)->a==agent.action,
@@ -149,7 +148,7 @@ function MinimalRLCore.step!(agent::DQNAgent,
 
     update_params!(agent, rng)
 
-    agent.prev_s = proc_state
+    agent.prev_s .= proc_state
     prev_s = get_state(agent, agent.prev_s)
     resh_prev_s = reshape(prev_s, size(prev_s)..., 1)
 
@@ -173,7 +172,7 @@ function update_params!(agent::DQNAgent, rng)
             r = to_device(agent.device, e.r)
             t = to_device(agent.device, e.t)
             sp = get_state(agent, e.sp)
-
+            
             ℒ = update!(agent.model,
                         agent.learning_update,
                         agent.optimizer,
