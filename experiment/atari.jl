@@ -23,22 +23,13 @@ function construct_agent(env)
     update_freq = 4
     min_mem_size = 20000
 
-    
     learning_rate = 0.00025
     momentum_term = 0.00
     squared_grad_term = 0.95
     min_grad_term = 1e-5
 
-    # image_replay = DeepRL.HistImageReplay(buffer_size,
-    #                                       (84,84),
-    #                                       DeepRL.image_manip_atari,
-    #                                       DeepRL.image_norm,
-    #                                       hist_length,
-    #                                       batch_size)
-
     example_state = MinimalRLCore.get_state(env)
 
-    
     init_f = Flux.glorot_uniform
     
     model = Chain(
