@@ -46,7 +46,7 @@ end
 
 # TODO: Generate w/ macros.
 @inline Base.@propagate_inbounds function Base.getindex(sb::StateBuffer, idx) where {A}
-    if sb.state_size isa Int
+    if sb.state_size isa Int || sb.state_size isa Tuple{Int}
         sb.buffer[:, idx]
     elseif sb.state_size isa Tuple{Int, Int}
         sb.buffer[ :, :, idx]
@@ -58,7 +58,7 @@ end
 end
 
 @inline Base.@propagate_inbounds function Base.view(sb::StateBuffer, idx) where {A}
-    if sb.state_size isa Int
+    if sb.state_size isa Int || sb.state_size isa Tuple{Int}
         view(sb.buffer, :, idx)
     elseif sb.state_size isa Tuple{Int, Int}
         view(sb.buffer, :, :, idx)
@@ -105,7 +105,7 @@ end
     @boundscheck if length(sb) == 0
         throw(BoundsError(sb, 1))
     end
-    sb.hist
+    copy(sb.hist)
 end
 
 @inline Base.@propagate_inbounds function Base.getindex(sb::HistStateBuffer, idx::Array{<:Integer, 1})
@@ -134,76 +134,3 @@ function Base.push!(sb::HistStateBuffer, state)
     sb.hist[end] = laststate(sb.buffer)
     return sb
 end
-
-
-# abstract type AbstractImageReplay <: AbstractReplay end
-
-# """
-#     HistImageReplay(size, img_size::Tuple{Int,Int}, image_manip, img_norm, hist, batchsize)
-
-# This is a experience replay buffer designed for managing a history of images. Currently it only allows for images with a single channel (i.e. gray scale). Currently the batchsize is needed ahead of time, but this could change in the future.
-
-# # Arguments
-# - `image_mainp`: Funciton (or callable object) which takes the raw image and returns the processed image (w/o normalizing to Floats)
-# - `image_norm`: Function (or callable object) which takes the processed image and returns the normalized image (type Array{Float32}).
-
-# """
-# struct HistImageReplay{ER<:AbstractReplay, IB<:ImageBuffer, IN} <: AbstractImageReplay
-#     exp_replay::ER
-#     image_buffer::IB
-#     img_norm::IN
-#     hist::Int
-#     cur_state::Array{Int, 1}
-#     s::Array{Float32, 4}
-#     sp::Array{Float32, 4}
-# end
-
-# function HistImageReplay(size, img_size::Tuple{Int, Int}, img_manip, img_norm, hist, batchsize)
-#     er = ExperienceReplay(size,
-#                           (Array{Int, 1}, Int, Array{Int, 1}, Float32, Bool),
-#                           (:s, :a, :sp, :r, :t))
-#     imb = ImageBuffer(size + 2*hist, img_manip, img_size)
-#     HistImageReplay(
-#         er,
-#         imb,
-#         img_norm,
-#         hist,
-#         ones(Int64, hist),
-#         zeros(Float32, img_size..., hist, batchsize),
-#         zeros(Float32, img_size..., hist, batchsize))
-# end
-
-
-# size(er::HistImageReplay) = size(er.exp_replay)
-
-# function add!(er::HistImageReplay, state::Array{UInt8})
-#     idx = add!(er.image_buffer, state)
-#     er.cur_state .= idx
-# end
-
-# """
-#     add!(er::HistImageReplay, exp_tuple)
-
-# # Arguments
-# - `transition::Tuple`: A transition tuple (s, a, sp, r, t)
-# """
-# function add!(er::HistImageReplay, transition::TPL) where {TPL<:Tuple}
-#     sp_img = transition[3]
-#     idx = add!(er.image_buffer, sp_img)
-#     s = copy(er.cur_state)
-#     sp = [[idx]; er.cur_state[1:3]]
-#     add!(er.exp_replay, (s, transition[2], sp, transition[4], transition[5]))
-#     er.cur_state .= sp
-# end
-
-# function sample(er::HistImageReplay, batch_size; rng=Random.GLOBAL_RNG)
-
-#     rows = sample(er.exp_replay, batch_size; rng=rng)
-#     for i = 1:batch_size
-#         er.s[:, :, :, i] .= er.img_norm(er.image_buffer[rows.s[i]])
-#         er.sp[ :, :, :, i] .= er.img_norm(er.image_buffer[rows.sp[i]])
-#     end
-
-#     return (s=er.s, a=rows.a, sp=er.sp, r=rows.r, t=rows.t)
-# end
-

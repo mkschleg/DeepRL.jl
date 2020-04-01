@@ -21,7 +21,7 @@ function construct_agent(s, num_actions)
     update_freq=1
     min_mem_size=1000
     er_size = 10000
-    hist = 1
+    hist = 2
 
     model = Chain(Dense(length(s)*hist, 128, Flux.relu),
                   # Dense(128, 128, Flux.relu),
@@ -48,20 +48,6 @@ function construct_agent(s, num_actions)
         min_mem_size,
         hist_squeeze = Val{true}()
     )
-
-    
-    # return DQNAgent{Int}(model,
-    #                      target_network,
-    #                      DeepRL.RMSPropTFCentered(0.001),
-    #                      QLearning(γ, Flux.mse),
-    #                      ϵGreedy(ϵ, num_actions),
-    #                      er,
-    #                      1,
-    #                      # length(s),
-    #                      batch_size,
-    #                      tn_update_freq,
-    #                      update_freq,
-    #                      min_mem_size)
 end
 
 
