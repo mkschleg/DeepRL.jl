@@ -143,12 +143,12 @@ function MinimalRLCore.start!(env::Atari)
     ALE.reset_game(env.ale)
     env.lives = 0
     env.died = false
-    env.reward = 0
+    env.reward = 0.0f0
     env.score = 0
     update_state!(env, 2)
 end
 
-MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env; kwargs...)
+MinimalRLCore.start!(env::Atari, rng::AbstractRNG) = MinimalRLCore.start!(env)
 
 function MinimalRLCore.environment_step!(env::Atari, action)
 
@@ -195,18 +195,28 @@ image_norm(img) = img./255f0
 # Visualization through RecipeBase.jl
 #####
 
-get_colorview(env::Atari, gray_scale::Val{true}) = 
+function get_colorview(env::Atari, gray_scale::Val{true})
     Images.colorview(Images.Gray, permutedims(reshape(env.rawscreen, (env.width, env.height)), (2,1))./255)
+end
 
 get_colorview(env::Atari, gray_scale::Val{false}) = 
-    Images.colorview(Images.RGB, permutedims(reshape(env.rawscreen, (3, env.width, env.height)), (3,2,1))./255)
+    Images.colorview(Images.RGB, permutedims(reshape(env.rawscreen, (3, env.width, env.height)), (1,3,2))./255)
 
-@recipe function f(env::Atari)
+get_colorview_image_manip(env::Atari, gray_scale::Val{true}) =
+    Images.Gray.(image_norm(image_manip_atari(MinimalRLCore.get_state(env))))
+
+get_colorview_image_manip(env::Atari, gray_scale::Val{false}) = 
+    Images.Gray.(image_norm(Images.colorview(Images.Gray, image_manip_atari(MinimalRLCore.get_state(env)))))
+
+@recipe function f(env::Atari, resize=false)
     ticks := nothing
     foreground_color_border := nothing
     grid := false
     legend := false
     aspect_ratio := 1
-
-    get_colorview(env, Val(env.gray_scale))
+    if resize
+        get_colorview_image_manip(env, Val(env.gray_scale))
+    else
+        get_colorview(env, Val(env.gray_scale))
+    end
 end

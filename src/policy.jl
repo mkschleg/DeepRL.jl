@@ -1,3 +1,6 @@
+
+import CuArrays: CuArray
+
 abstract type AbstractPolicy end
 
 abstract type AbstractValuePolicy <: AbstractPolicy end

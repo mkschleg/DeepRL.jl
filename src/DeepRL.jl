@@ -2,16 +2,17 @@ module DeepRL
 
 greet() = print("Hello Deep Reinforcement Learning!")
 
-using Reexport, Lazy
+import Reexport: @reexport
+import MacroTools: @forward
+
 @reexport using MinimalRLCore
 
 export ExperienceReplay,
     WeightedExperienceReplay, OnlineReplay,
-    size, getindex, add!, sample
+    getindex, add!, sample
 
-include("util/table_buffer.jl")
+include("state_buffer.jl")
 include("replay.jl")
-include("image_buffer.jl")
 include("optimizers.jl")
 
 export MountainCar, Atari
@@ -32,6 +33,5 @@ export DQNAgent
 include("agent.jl")
 
 include("utils.jl")
-
 
 end # module

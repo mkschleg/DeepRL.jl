@@ -39,7 +39,7 @@ MinimalRLCore.get_actions(env::MountainCar) = env.actions
 valid_action(env::MountainCar, action) = action in env.actions
 
 
-function MinimalRLCore.reset!(env::MountainCar, rng::AbstractRNG)
+function MinimalRLCore.reset!(env::MountainCar, rng::AbstractRNG=Random.GLOBAL_RNG)
     env.pos = (rand(rng)*(MountainCarConst.pos_initial_range[2]
                           - MountainCarConst.pos_initial_range[1])
                + MountainCarConst.pos_initial_range[1])
@@ -73,9 +73,9 @@ end
 
 function MinimalRLCore.get_reward(env::MountainCar) # -> determines if the agent_state is terminal
     if env.pos >= MountainCarConst.pos_limit[2]
-        return 0
+        return 0.0f0
     end
-    return -1
+    return -1.0f0
 end
 
 
@@ -88,7 +88,7 @@ function MinimalRLCore.get_state(env::MountainCar)
     if env.normalized
         return get_normalized_state(env)
     else
-        return [env.pos, env.vel]
+        return Float32[env.pos, env.vel]
     end
 end
 
@@ -96,6 +96,6 @@ end
 function get_normalized_state(env::MountainCar)
     pos_limit = MountainCarConst.pos_limit
     vel_limit = MountainCarConst.vel_limit
-    return [(env.pos - pos_limit[1])/(pos_limit[2] - pos_limit[1]),
-            (env.vel - vel_limit[1])/(vel_limit[2] - vel_limit[1])]
+    return Float32[(env.pos - pos_limit[1])/(pos_limit[2] - pos_limit[1]),
+                   (env.vel - vel_limit[1])/(vel_limit[2] - vel_limit[1])]
 end
