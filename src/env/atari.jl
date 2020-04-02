@@ -21,7 +21,7 @@ Here we've decided to take a more procedural approach. The end user can still wr
 settings or use this type as a template for their own implementation.
 
 Use cases found in the literature not yet implemented:
-- Terminate on life lost
+- Terminate on life lost -> will implement w/ a boolean setting.
 - 
 
 ## Arguments
@@ -104,6 +104,13 @@ This is the settings used in "Revisiting the Arcade Learning Environment: Evalua
 RevisitingALEAtari(gamename, seed) =
     Atari(gamename, seed, 5, :max, 0.25f0, true)
 
+"""
+    DopamineALEAtari(gamename, seed)
+
+This is the settings used in the Dopamine python package: 
+"""
+DopamineALEAtari(gamename, seed) =
+    Atari(gamename, seed, 4, :max, 0.25f0, true)
 
 
 # Some utility functions
