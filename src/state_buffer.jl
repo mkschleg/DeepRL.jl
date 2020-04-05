@@ -69,7 +69,7 @@ end
     end
 end
 
-function Base.push!(sb::StateBuffer, state)
+function Base.push!(sb::StateBuffer, state; new_episode=false)
     view(sb, sb.cur_idx) .= state
     sb.cur_idx += 1
     if sb.cur_idx > sb.capacity
@@ -97,7 +97,6 @@ HistStateBuffer{T}(size, state_size, hist_length, squeeze=false) where {T} = if 
 else
     HistStateBuffer(StateBuffer{T}(size + hist_length, state_size), hist_length, ones(Int, hist_length), Val(squeeze))
 end
-
 
 @forward HistStateBuffer.buffer Base.length, isfull, capacity, Base.isempty
 
@@ -127,10 +126,14 @@ end
     end
 end
 
-function Base.push!(sb::HistStateBuffer, state)
-    push!(sb.buffer, state)
+function Base.push!(sb::HistStateBuffer, state; new_episode=false)
+    push!(sb.buffer, state; new_episode=new_episode)
     hist_length = sb.hist_length
-    sb.hist[1:(hist_length - 1)] = sb.hist[2:end]
-    sb.hist[end] = laststate(sb.buffer)
+    if new_episode
+        sb.hist .= laststate(sb.buffer)
+    else
+        sb.hist[1:(end - 1)] = sb.hist[2:end]
+        sb.hist[end] = laststate(sb.buffer)
+    end
     return sb
 end

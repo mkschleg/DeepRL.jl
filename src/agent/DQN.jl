@@ -126,12 +126,12 @@ function DQNAgent(model,
     
 end
 
-function process_state(agent::DQNAgent, s)
+function process_state(agent::DQNAgent, s; start=false)
     # this stores the state in the state buffer (if not Nothing) and preproccesses the state.
     if agent.state_buffer isa Nothing
         agent.state_preproc(s)
     else
-        push!(agent.state_buffer, agent.state_preproc(s))
+        push!(agent.state_buffer, agent.state_preproc(s); new_episode=start)
         laststate(agent.state_buffer)
     end
 end
@@ -150,7 +150,7 @@ function MinimalRLCore.start!(agent::DQNAgent,
                               rng::AbstractRNG=Random.GLOBAL_RNG)
 
     # agent.prev_s .= process_state(agent, env_s_tp1)
-    agent.prev_s = process_state(agent, env_s_tp1)
+    agent.prev_s = process_state(agent, env_s_tp1; start=true)
     state = get_state_from_buffer(agent, agent.prev_s)
     resh_state = reshape(state, size(state)..., 1)
 

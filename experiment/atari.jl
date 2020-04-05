@@ -32,6 +32,7 @@ function main_experiment(seed,
     res_save_file = joinpath(save_loc, "results.bson")
 
     Random.seed!(Random.GLOBAL_RNG, seed)
+    
     env = DeepRL.RevisitingALEAtari(gamename, rand(UInt16))
     agent = DeepRL.RevisitingALEDQNBaseline(env)
 
