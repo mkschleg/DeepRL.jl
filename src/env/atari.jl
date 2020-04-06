@@ -137,7 +137,7 @@ function update_state!(env::Atari, t)
     return env.state_buffer[t]
 end
 
-function _pool_state(env::Atari)
+function _pool_state!(env::Atari)
     if env.color_averaging == :max
         env.state_buffer[2] .= max.(env.state_buffer[1], env.state_buffer[2])
     elseif env.color_averaging == :average
@@ -152,6 +152,8 @@ function MinimalRLCore.start!(env::Atari)
     env.died = false
     env.reward = 0.0f0
     env.score = 0
+    fill!(env.state_buffer[1], 0)
+    fill!(env.state_buffer[2], 0)
     update_state!(env, 2)
 end
 
@@ -162,11 +164,14 @@ function MinimalRLCore.environment_step!(env::Atari, action)
     env.reward = 0.0f0
     for i ∈ 1:env.frameskip
         env.reward += ALE.act(env.ale, action)
-        if (env.frameskip - i) < 2
+        if is_terminal(env)
+            break
+        elseif (env.frameskip - i) < 2
             update_state!(env, env.frameskip - i + 1)
         end
     end
 
+    _pool_state!(env)
     env.score += env.reward
 end
 

@@ -31,6 +31,7 @@ isfull(sb::StateBuffer) = sb.full
 capacity(sb::StateBuffer) = sb.capacity
 Base.length(sb::StateBuffer) = isfull(sb) ? capacity(sb) : (sb.cur_idx - 1)
 Base.eltype(sb::StateBuffer) = Base.eltype(sb.buffer)
+hist_length(sb::StateBuffer) = 1
 
 @inline Base.@propagate_inbounds function laststate(sb::StateBuffer)
     @boundscheck if length(sb) == 0
@@ -99,6 +100,8 @@ else
 end
 
 @forward HistStateBuffer.buffer Base.length, isfull, capacity, Base.isempty
+
+hist_length(sb::HistStateBuffer) = sb.hist_length
 
 @inline Base.@propagate_inbounds function laststate(sb::HistStateBuffer)
     @boundscheck if length(sb) == 0

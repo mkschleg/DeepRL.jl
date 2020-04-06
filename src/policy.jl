@@ -84,7 +84,7 @@ function _get_eps_for_step(ap::ϵGreedyDecay, step=ap.cur_step)
     ϵ_min = ap.ϵ_range[2]
     ϵ_max = ap.ϵ_range[1]
     
-    steps_left = ap.decay_period + ap.warmup_steps - ap.cur_step
+    steps_left = ap.decay_period + ap.warmup_steps - step
     bonus = (ϵ_max - ϵ_min) * steps_left / ap.decay_period
     bonus = clamp(bonus, 0.0, ϵ_max - ϵ_min)
     ϵ_min + bonus
