@@ -32,9 +32,14 @@ function main_experiment(seed,
     res_save_file = joinpath(save_loc, "results.bson")
 
     Random.seed!(Random.GLOBAL_RNG, seed)
+
+    env = DeepRL.DopamineALEAtari(gamename, rand(UInt16))
+    agent = DeepRL.DopamineDQNBaseline(env; minimal_action_set=true)
+
+    @info "Number Actions: $(length(agent.acting_policy.action_set))" 
     
-    env = DeepRL.RevisitingALEAtari(gamename, rand(UInt16))
-    agent = DeepRL.RevisitingALEDQNBaseline(env)
+    # env = DeepRL.RevisitingALEAtari(gamename, rand(UInt16))
+    # agent = DeepRL.RevisitingALEDQNBaseline(env)
 
     total_rews = Array{Int,1}()
     steps = Array{Int,1}()
