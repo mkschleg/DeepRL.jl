@@ -1,5 +1,5 @@
 
-function DopamineDQNBaseline(env)
+function DopamineDQNBaseline(env; minimal_action_set = false)
     # Replicate Dopamine's Results!
     
     γ=0.99
@@ -16,16 +16,21 @@ function DopamineDQNBaseline(env)
     min_grad_term = 1e-5
 
     example_state = MinimalRLCore.get_state(env)
+    action_set = if minimal_action_set
+        get_minimal_actions(env)
+    else
+        get_actions(env)
+    end
 
     init_f = Flux.glorot_uniform
-    
+
     model = Chain(
         Conv((8,8), hist_length=>32, relu, stride=4, init=init_f),
         Conv((4,4), 32=>64, relu, stride=2, init=init_f),
         Conv((3,3), 64=>64, relu, stride=1, init=init_f),
         (x)->reshape(x, :, size(x, 4)),
         Dense(3136, 512, relu, initW=init_f),
-        Dense(512, length(get_actions(env)), identity, initW=init_f)) |> gpu
+        Dense(512, length(action_set), identity, initW=init_f)) |> gpu
 
     target_network  = deepcopy(model)
 
@@ -38,7 +43,7 @@ function DopamineDQNBaseline(env)
                                  squared_grad_term,
                                  momentum_term,
                                  min_grad_term),
-        DeepRL.ϵGreedyDecay((1.0, 0.01), 250000, min_mem_size, get_actions(env)),
+        DeepRL.ϵGreedyDecay((1.0, 0.01), 250000, min_mem_size, action_set),
         buffer_size,
         hist_length,
         example_state,
