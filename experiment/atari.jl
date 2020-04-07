@@ -77,8 +77,7 @@ function main_experiment(seed,
             push!(total_rews, tr)
             push!(steps, stp)
             
-            @info "" returns = tr
-            @info "" steps = stp
+            @info "Train" returns = tr steps = stp
             eps += 1
         end
         
