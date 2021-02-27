@@ -7,6 +7,14 @@ import DataStructures
 
 abstract type AbstractReplay end
 
+function sample
+end
+
+function push!
+end
+
+
+
 abstract type AbstractWeightedReplay <: AbstractReplay end
 
 mutable struct ExperienceReplay{CB} <: AbstractReplay
@@ -27,25 +35,15 @@ ExperienceReplayDef(size, obs_size, obs_type) =
 Base.length(er::ExperienceReplay) = length(er.buffer)
 Base.getindex(er::ExperienceReplay, idx) = er.buffer[idx]
 
-add_exp!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
+Base.push!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
 
-sample(er::ExperienceReplay, batch_size) = sample(Random.GLOBAL_RNG, er, batch_size)
+sample(er::ExperienceReplay, batch_size) =
+    sample(Random.GLOBAL_RNG, er, batch_size)
 
 function sample(rng::Random.AbstractRNG, er::ExperienceReplay, batch_size)
     idx = rand(rng, 1:length(er), batch_size)
     return er[idx]
 end
-
-# warmup(er::ExperienceReplay{CB, Nothing}, x) where {CB} = x
-# warmup(er::ExperienceReplay, x) = begin
-#     push!(er.state_buffer, x)
-#     lastindex(er.state_buffer)
-# end
-
-# get_state(er::ExperienceReplay{CB, Nothing}, x) where {CB} = x
-# get_state(er::ExperienceReplay, x) = er.state_buffer[x]
-
-
 
 mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
     buffer::CB

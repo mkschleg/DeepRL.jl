@@ -1,5 +1,5 @@
 
-import CuArrays: CuArray
+import CUDA: CuArray
 
 abstract type AbstractPolicy end
 

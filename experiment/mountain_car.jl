@@ -21,14 +21,12 @@ function construct_agent(s, num_actions)
     update_freq=1
     min_mem_size=1000
     er_size = 10000
-    hist = 2
+    hist = 1
 
-    model = Chain(Dense(length(s)*hist, 128, Flux.relu),
-                  # Dense(128, 128, Flux.relu),
-                  # Dense(128, 32, Flux.relu),
-                  Dense(128, num_actions))
+    model = Chain(Dense(length(s)*hist, 64, Flux.relu),
+                  Dense(64, 64, Flux.relu),
+                  Dense(64, num_actions))
 
-    @show length(s)
     # er = DeepRL.ExperienceReplayDef(er_size, 1, Int, DeepRL.StateBuffer{Float32}(er_size, length(s)))
     target_network = deepcopy(model)
 
@@ -80,7 +78,8 @@ function main_experiment(seed, max_num_steps)
         tr, stp =
             run_episode!(mc, agent, episode_cut_off, rng) do (s, a, s′, r)
                 cur_step+=1
-               next!(p, showvalues=[(:step, sum(steps)+cur_step), (:episode, eps)])
+                # next!(p, showvalues=[(:step, sum(steps)+cur_step), (:episode, eps)])
+                next!(p)
             end
         push!(total_rews, tr)
         push!(steps, stp)

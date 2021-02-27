@@ -3,12 +3,12 @@ import Random
 # import Base.getindex, Base.size, Base.eltype
 
 mutable struct SumTree{T}
-    capacity::Int64
+    capacity::Int
     tree_struct::Array{Float64, 1}
     data::Array{T, 1}
-    write_pos::Int64
-    size::Int64
-    tree_len::Int64
+    write_pos::Int
+    size::Int
+    tree_len::Int
     SumTree{T}(capacity) where T = new{T}(
         capacity,
         zeros(2*capacity - 1),
@@ -31,7 +31,7 @@ function update!(tree::SumTree, idx, weight)
 end
 
 function propagate!(tree::SumTree, idx, change)
-    parent = div((idx - 1), 2)
+    parent = (idx - 1) ÷ 2
     tree.tree_struct[parent + 1] += change
     if parent != 0
         propagate!(tree, parent, change)
