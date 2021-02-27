@@ -13,7 +13,6 @@ mutable struct StateBuffer{T, N, S}
     capacity::Int
     full::Bool
     state_size::S
-
 end
 StateBuffer{T}(size, state_size) where {T} = begin
     s_bfr = zeros(T, state_size..., size)

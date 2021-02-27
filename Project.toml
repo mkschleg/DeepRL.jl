@@ -4,9 +4,11 @@ authors = ["Matthew Schlegel <mkschleg@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArcadeLearningEnvironment = "b7f77d8d-088d-5e02-8ac0-89aab2acc977"
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
-CuArrays = "3a865a2d-5b23-5a0f-bc46-62713ec82fae"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ContGridWorlds = "f1a3a3cd-a813-409e-939c-b862e0727930"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"

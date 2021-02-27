@@ -94,7 +94,7 @@ function DQNAgent(model,
     else
         DeepRL.HistStateBuffer{eltype(proc_state)}(replay_size, size(proc_state), hist_length, hist_squeeze)
     end
-    
+
     prev_s = if state_buffer isa Nothing
         state_processor(example_state)
     elseif state_buffer isa StateBuffer
@@ -156,7 +156,7 @@ function MinimalRLCore.start!(agent::DQNAgent,
 
     agent.action = sample(agent.acting_policy,
                           to_host(agent.model(resh_state)),
-                          rng)
+                          rng) 
 
     return agent.action
 end
@@ -195,7 +195,8 @@ function update_params!(agent::DQNAgent, rng)
     if length(agent.replay) > agent.min_mem_size
         if agent.training_steps%agent.update_freq == 0
 
-            e = sample(rng, agent.replay,
+            e = sample(rng,
+                       agent.replay,
                        agent.batch_size)
             
             s = get_state_from_buffer(agent, e.s)
@@ -216,12 +217,11 @@ function update_params!(agent::DQNAgent, rng)
     end
     
     # Target network updates
+
+    
     if !(agent.target_network isa Nothing)
         if agent.training_steps%agent.target_update_freq == 0
-            for ps ∈ zip(params(agent.model),
-                         params(agent.target_network))
-                copyto!(ps[2], ps[1])
-            end
+            update_target_network(agent.model, agent.target_network)
         end
     end
 
