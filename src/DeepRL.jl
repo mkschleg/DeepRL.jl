@@ -8,8 +8,11 @@ import MacroTools: @forward
 @reexport using MinimalRLCore
 
 export ExperienceReplay,
-    WeightedExperienceReplay, OnlineReplay,
-    getindex, add!, sample
+    WeightedExperienceReplay,
+    OnlineReplay,
+    getindex,
+    add!,
+    sample
 
 include("state_buffer.jl")
 include("replay.jl")
@@ -20,6 +23,9 @@ include("env.jl")
 
 export ϵGreedy, sample
 include("policy.jl")
+
+
+include("update_utils.jl")
 
 export
     QLearning,

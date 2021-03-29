@@ -131,8 +131,29 @@ function process_state(agent::DQNAgent, s; start=false)
     if agent.state_buffer isa Nothing
         agent.state_preproc(s)
     else
-        push!(agent.state_buffer, agent.state_preproc(s); new_episode=start)
+        Base.push!(agent.state_buffer, agent.state_preproc(s); new_episode=start)
         laststate(agent.state_buffer)
+    end
+end
+
+function process_input(agent::DQNAgent, s, r; start=false)
+    proc_state = process_state(agent, s; start)
+    proc_rew = agent.rew_transform(r) # Atari implementation returns float64s for the reward.
+    proc_action = findfirst((a)->a==agent.action,
+                            action_set(agent.acting_policy))::Int
+    proc_state, proc_action, proc_rew
+end
+
+function get_action(agent::DQNAgent, s, rng)
+    if agent.acting_policy isa ϵGreedyDecay
+        sample(agent.acting_policy,
+               to_host(agent.model(s)),
+               agent.training_steps,
+               rng)
+    else
+        sample(agent.acting_policy,
+               to_host(agent.model(s)),
+               rng)
     end
 end
 
@@ -149,14 +170,11 @@ function MinimalRLCore.start!(agent::DQNAgent,
                               env_s_tp1,
                               rng::AbstractRNG=Random.GLOBAL_RNG)
 
-    # agent.prev_s .= process_state(agent, env_s_tp1)
     agent.prev_s = process_state(agent, env_s_tp1; start=true)
     state = get_state_from_buffer(agent, agent.prev_s)
     resh_state = reshape(state, size(state)..., 1)
 
-    agent.action = sample(agent.acting_policy,
-                          to_host(agent.model(resh_state)),
-                          rng) 
+    agent.action = get_action(agent, resh_state, rng)
 
     return agent.action
 end
@@ -167,14 +185,16 @@ function MinimalRLCore.step!(agent::DQNAgent,
                              terminal,
                              rng::AbstractRNG=Random.GLOBAL_RNG)
 
-    proc_state = process_state(agent, env_s_tp1)
-    add_ret = add_exp!(agent.replay,
-                       (agent.prev_s,
-                        findfirst((a)->a==agent.action,
-                                  agent.acting_policy.action_set)::Int,
-                        proc_state,
-                        agent.rew_transform(r), # Atari implementation returns float64s for the reward.
-                        terminal))
+    # proc_state = process_state(agent, env_s_tp1)
+
+    proc_state, a_t, proc_rew = process_input(agent, env_s_tp1, r)
+    
+    add_ret = Base.push!(agent.replay,
+                         (agent.prev_s,
+                          a_t, 
+                          proc_state,
+                          proc_rew, # Atari implementation returns float64s for the reward.
+                          terminal))
 
     update_params!(agent, rng)
 
@@ -182,43 +202,39 @@ function MinimalRLCore.step!(agent::DQNAgent,
     prev_s = get_state_from_buffer(agent, agent.prev_s)
     resh_prev_s = reshape(prev_s, size(prev_s)..., 1)
 
-    agent.action = sample(agent.acting_policy,
-                          to_host(agent.model(resh_prev_s)),
-                          rng)
-
+    agent.action = get_action(agent, resh_prev_s, rng)
+    
     return agent.action
 end
 
 function update_params!(agent::DQNAgent, rng)
     
 
-    if length(agent.replay) > agent.min_mem_size
-        if agent.training_steps%agent.update_freq == 0
+    us = if length(agent.replay) > agent.min_mem_size &&
+        agent.training_steps % agent.update_freq == 0
 
-            e = sample(rng,
-                       agent.replay,
-                       agent.batch_size)
+        e = sample(rng,
+                   agent.replay,
+                   agent.batch_size)
+        
+        s = get_state_from_buffer(agent, e.s)
+        r = to_device(agent.device, e.r)
+        t = to_device(agent.device, e.t)
+        sp = get_state_from_buffer(agent, e.sp)
             
-            s = get_state_from_buffer(agent, e.s)
-            r = to_device(agent.device, e.r)
-            t = to_device(agent.device, e.t)
-            sp = get_state_from_buffer(agent, e.sp)
-            
-            ℒ = update!(agent.model,
-                        agent.learning_update,
-                        agent.optimizer,
-                        s,
-                        e.a,
-                        sp,
-                        r,
-                        t,
-                        agent.target_network)
-        end
+        update!(agent.model,
+                agent.learning_update,
+                agent.optimizer,
+                s,
+                e.a,
+                sp,
+                r,
+                t,
+                agent.target_network)
+        
     end
-    
-    # Target network updates
 
-    
+    # Target network updates
     if !(agent.target_network isa Nothing)
         if agent.training_steps%agent.target_update_freq == 0
             update_target_network(agent.model, agent.target_network)
@@ -227,7 +243,7 @@ function update_params!(agent::DQNAgent, rng)
 
     agent.training_steps += 1
 
-    return nothing    
+    us
 end
 
 

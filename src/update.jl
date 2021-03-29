@@ -2,9 +2,7 @@
 using Flux
 using LinearAlgebra
 
-
 abstract type AbstractLearningUpdate end
-
 abstract type AbstractQLearning <: AbstractLearningUpdate end
 
 struct QLearning{F} <: AbstractQLearning
@@ -32,12 +30,13 @@ function update!(model,
                  terminal,
                  target_model)
 
+    local ℒ = 0.0f0
     ps = params(model)
     gs = gradient(ps) do
-        loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
+        ℒ = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
     Flux.Optimise.update!(opt, ps, gs)
-    return 0.0f0
+    return UpdateState(ℒ, gs, ps, opt)
 end
 
 function update!(model,

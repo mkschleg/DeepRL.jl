@@ -13,8 +13,6 @@ end
 function push!
 end
 
-
-
 abstract type AbstractWeightedReplay <: AbstractReplay end
 
 mutable struct ExperienceReplay{CB} <: AbstractReplay
@@ -35,7 +33,7 @@ ExperienceReplayDef(size, obs_size, obs_type) =
 Base.length(er::ExperienceReplay) = length(er.buffer)
 Base.getindex(er::ExperienceReplay, idx) = er.buffer[idx]
 
-Base.push!(er::ExperienceReplay, experience) = add!(er.buffer, experience)
+Base.push!(er::ExperienceReplay, experience) = Base.push!(er.buffer, experience)
 
 sample(er::ExperienceReplay, batch_size) =
     sample(Random.GLOBAL_RNG, er, batch_size)
@@ -60,14 +58,14 @@ function getindex(er::OnlineReplay, idx)
     NamedTuple{er.column_names}((getindex.(data, i) for i in 1:length(er.column_names)))
 end
 isfull(er::OnlineReplay) = DataStructures.isfull(er.buffer)
-add!(er::OnlineReplay, experience) = push!(er.buffer, experience)
+Base.push!(er::OnlineReplay, experience) = push!(er.buffer, experience)
 
 function sample(er::OnlineReplay, batch_size; rng=Random.GLOBAL_RNG)
     @assert batch_size <= size(er.buffer)[1]
     return er[(end-batch_size+1):end]
 end
 
-warmup(er::OnlineReplay, x) = x
+warmup(::OnlineReplay, x) = x
 
 mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedReplay
     buffer::CB
@@ -75,21 +73,21 @@ mutable struct WeightedExperienceReplay{CB<:CircularBuffer} <: AbstractWeightedR
 end
 
 WeightedExperienceReplay(size, types, column_names) =
-    new(CircularBuffer(size, types, column_names),
-        SumTree{Int64}(size))
+    WeightedExperienceReplay(
+        CircularBuffer(size, types, column_names),
+        SumTree{Int}(size))
 
-# size(er::WeightedExperienceReplay) = size(er.buffer)
 @forward WeightedExperienceReplay.buffer getindex
 
-function add!(er::WeightedExperienceReplay, experience, weight)
-    idx = add!(er.buffer, experience)
+function Base.push!(er::WeightedExperienceReplay, experience, weight)
+    idx = push!(er.buffer, experience)
     add!(er.sumtree, weight, idx)
     return
 end
 
 function sample(er::WeightedExperienceReplay, batch_size; rng=Random.GLOBAL_RNG)
     batch_idx, batch_priorities, idx = sample(er.sumtree, batch_size; rng=rng)
-    return getrow(er.buffer, idx)
+    return er[idx]
 end
 
 

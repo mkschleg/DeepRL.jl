@@ -5,7 +5,7 @@ abstract type AbstractPolicy end
 
 abstract type AbstractValuePolicy <: AbstractPolicy end
 
-action_set(ap::AbstractValuePolicy) = nothing
+action_set(::AbstractValuePolicy) = nothing
 Base.eltype(ap::AbstractValuePolicy) = eltype(action_set(ap))
 
 _get_max_action(ap::AbstractValuePolicy, values) =
@@ -70,17 +70,16 @@ Base.@kwdef mutable struct ϵGreedyDecay{AS} <: AbstractValuePolicy
     ϵ_range::Tuple{Float64, Float64}
     decay_period::Int
     warmup_steps::Int
-    cur_step::Int = 0
     action_set::AS
     ϵGreedyDecay(ϵ_range, decay_period, warmup_steps, action_set::AS) where {AS} =
-        new{AS}(ϵ_range, decay_period, warmup_steps, 0, action_set)
+        new{AS}(ϵ_range, decay_period, warmup_steps, action_set)
 end
 
 ϵGreedyDecay(ϵ_range, end_step, num_actions) = ϵGreedyDecay(ϵ_range, end_step, 1:num_actions)
 
 action_set(ap::ϵGreedyDecay) = ap.action_set
 
-function _get_eps_for_step(ap::ϵGreedyDecay, step=ap.cur_step)
+function _get_eps_for_step(ap::ϵGreedyDecay, step)
     ϵ_min = ap.ϵ_range[2]
     ϵ_max = ap.ϵ_range[1]
     
@@ -90,17 +89,10 @@ function _get_eps_for_step(ap::ϵGreedyDecay, step=ap.cur_step)
     ϵ_min + bonus
 end
 
-function sample(ap::ϵGreedyDecay, values, rng)
-    ap.cur_step += 1
-    ϵ = _get_eps_for_step(ap::ϵGreedyDecay)
-    if rand(rng) > ϵ
-        return _get_max_action(ap, values)
-    else
-        return rand(rng, ap.action_set)
-    end
-end
+sample(ap::ϵGreedyDecay, values, step) =
+    sample(ap, values, step, Random.GLOBAL_RNG)
 
-function sample(ap::ϵGreedyDecay, values, rng, step)
+function sample(ap::ϵGreedyDecay, values, step, rng)
     ϵ = _get_eps_for_step(ap::ϵGreedyDecay, step)
     if rand(rng) > ϵ
         return _get_max_action(ap, values)
@@ -109,10 +101,10 @@ function sample(ap::ϵGreedyDecay, values, rng, step)
     end
 end
 
-function get_prob(ap::ϵGreedyDecay, values, action, step=ap.cur_step)
+function get_prob(ap::ϵGreedyDecay, values, action, step)
     ϵ = _get_eps_for_step(ap, step)
     if action == findmax(values)[2]
-        return 1 - ϵ + (ap.ϵ / length(action_set))
+        return 1 - ϵ + (ϵ / length(action_set))
     else
         return ϵ / length(action_set)
     end

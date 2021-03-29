@@ -1,6 +1,5 @@
 
 import Random
-# import Base.getindex, Base.size, Base.eltype
 
 mutable struct SumTree{T}
     capacity::Int
