@@ -45,7 +45,7 @@ hist_length(sb::StateBuffer) = 1
 end
 
 # TODO: Generate w/ macros.
-@inline Base.@propagate_inbounds function Base.getindex(sb::StateBuffer, idx) where {A}
+@inline Base.@propagate_inbounds function Base.getindex(sb::StateBuffer, idx)
     if sb.state_size isa Int || sb.state_size isa Tuple{Int}
         sb.buffer[:, idx]
     elseif sb.state_size isa Tuple{Int, Int}
@@ -57,7 +57,7 @@ end
     end
 end
 
-@inline Base.@propagate_inbounds function Base.view(sb::StateBuffer, idx) where {A}
+@inline Base.@propagate_inbounds function Base.view(sb::StateBuffer, idx)
     if sb.state_size isa Int || sb.state_size isa Tuple{Int}
         view(sb.buffer, :, idx)
     elseif sb.state_size isa Tuple{Int, Int}

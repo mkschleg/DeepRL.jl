@@ -31,7 +31,7 @@ function update!(model,
                  target_model)
 
     local ℒ = 0.0f0
-    ps = params(model)
+    ps = Flux.params(model)
     gs = gradient(ps) do
         ℒ = loss(lu, model, s_t, a_t, s_tp1, r, terminal, target_model)
     end
@@ -42,9 +42,9 @@ end
 function update!(model,
                  lu::T,
                  opt,
-                 s_t::Array{<:AbstractArray, 1},
+                 s_t::Vector{<:AbstractArray},
                  a_t,
-                 s_tp1::Array{<:AbstractArray, 1},
+                 s_tp1::Vector{<:AbstractArray},
                  r,
                  terminal,
                  args...) where {T<:AbstractLearningUpdate}

@@ -13,7 +13,7 @@ Implements the RMSProp algortihm as implemented in tensorflow.
 [RMSProp](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
 [Tensorflow RMSProp](https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/RMSprop)
 """
-mutable struct RMSPropTF
+mutable struct RMSPropTF <: Flux.Optimise.AbstractOptimiser
     eta::Float64
     rho::Float64
     gamma::Float64
@@ -46,7 +46,7 @@ Implements the Centered version of RMSProp algortihm as implemented in tensorflo
 [RMSProp](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
 [Tensorflow RMSProp](https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/RMSprop)
 """
-mutable struct RMSPropTFCentered
+mutable struct RMSPropTFCentered <: Flux.Optimise.AbstractOptimiser
     eta::Float64
     rho::Float64
     gamma::Float64

@@ -9,8 +9,7 @@ using TensorBoardLogger
 using Logging
 using Statistics
 
-import MinimalRLCore
-
+using MinimalRLCore
 
 function construct_agent(s, num_actions)
     
