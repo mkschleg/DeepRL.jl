@@ -26,8 +26,9 @@ function get_args_and_order(default_config)
         chk = @capture(ex, k_ => v_)
         # @show k
         if chk
-            push!(arg_order, k)
-            push!(args, :($k=>$v))
+            k_str = string(k)
+            push!(arg_order, k_str)
+            push!(args, :($k_str=>$v))
         end
         ex
     end
@@ -185,4 +186,6 @@ macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:co
         end
     end
 end
+
+end # module macros
 

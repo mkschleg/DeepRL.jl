@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "91a42c678d110a9645c154e0dd5ca7a7a7f90abb"
+project_hash = "0caafd42071aadc2f833ec4a7d53e555019065a2"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -255,14 +255,6 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "89a9db8d28102b094992472d333674bd1a83ce2a"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 version = "1.5.1"
-
-[[deps.ContGridWorlds]]
-deps = ["Colors", "MinimalRLCore", "Random", "RecipesBase", "Reexport"]
-git-tree-sha1 = "5a9b5ea1df92d50970554fc08963bb80e0472a92"
-repo-rev = "main"
-repo-url = "git@github.com:mkschleg/ContGridWorlds.jl.git"
-uuid = "f1a3a3cd-a813-409e-939c-b862e0727930"
-version = "0.1.0"
 
 [[deps.ContextVariablesX]]
 deps = ["Compat", "Logging", "UUIDs"]

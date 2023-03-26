@@ -40,7 +40,7 @@ include("update.jl")
 export DQNAgent
 include("agent.jl")
 
-
-# include("exp_utils.jl")
+include("exputil/build_ann.jl")
+include("exputil/macros.jl")
 
 end # module

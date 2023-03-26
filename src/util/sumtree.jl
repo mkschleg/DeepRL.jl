@@ -1,5 +1,6 @@
 
 import Random
+import Base: get
 
 mutable struct SumTree{T}
     capacity::Int
@@ -52,7 +53,7 @@ function add!(tree::SumTree, weight, data)
     end
 end
 
-function get(tree::SumTree, s)
+function Base.get(tree::SumTree, s)
     idx = retrieve(tree, 0, s)
     data_idx = idx - tree.capacity + 1
 

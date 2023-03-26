@@ -9,10 +9,41 @@ using TensorBoardLogger
 using Logging
 using Statistics
 
+import DeepRL: Macros
+import .Macros: @generate_config_funcs, @generate_working_function, @generate_ann_size_helper
+
+
 using MinimalRLCore
 
-function construct_agent(s, num_actions)
+@generate_config_funcs begin
+    info"""
+    Experiment details.
+    --------------------
+    - `seed::Int`: seed of RNG
+    - `steps::Int`: Number of steps taken in the experiment
+    """
+    seed => 1
+    steps => 300000
+end
+
+function build_ann(config, in, actions, rng)
     
+    NN_config = [
+        Dict("type"=>"Dense", "out"=>64, "bias"=>true, "activation"=>"relu"),
+        Dict("type"=>"Dense", "out"=>64, "bias"=>true, "activation"=>"relu"),
+        Dict("type"=>"Dense", "out"=>"actions", "bias"=>true, "activation"=>"linear")
+    ]
+
+    model = DeepRL.build_ann_from_config(
+        rng,
+        (in,),
+        NN_config,
+        init=Flux.glorot_uniform(rng),
+        actions=actions)
+end
+
+function construct_agent(env, config, rng=Random.default_rng())
+
     ϵ=0.1
     γ=1.0f0
     batch_size=32
@@ -23,13 +54,12 @@ function construct_agent(s, num_actions)
     er_size = 10000
     hist = 1
 
-    model = Chain(Dense(length(s)*hist, 64, Flux.relu),
-                  Dense(64, 64, Flux.relu),
-                  Dense(64, num_actions))
+    num_actions = length(get_actions(env))
+    s = MinimalRLCore.get_state(env)
 
-    # er = DeepRL.ExperienceReplayDef(er_size, 1, Int, DeepRL.StateBuffer{Float32}(er_size, length(s)))
+    model = build_ann(config, length(s), num_actions, rng)
+    
     target_network = deepcopy(model)
-
 
     return DQNAgent(
         model,
@@ -49,15 +79,42 @@ function construct_agent(s, num_actions)
 end
 
 
-function main_experiment(seed, max_num_steps)
+"""
+    construct_env
 
+Construct direction tmaze using:
+- `size::Int` size of hallway.
+"""
+function construct_env(config, args...)
     mc = MountainCar(0.0, 0.0, true)
-    Random.seed!(Random.GLOBAL_RNG, seed)
-    rng = Random.GLOBAL_RNG
+end
+
+Macros.@generate_ann_size_helper
+Macros.@generate_working_function
+
+"""
+    main_experiment
+
+Run an experiment from config. See [`MountainCarExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`DirectionalTMazeERExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
+function main_experiment(config;
+                         progress=false,
+                         testing=false,
+                         overwrite=false)
+
+    seed = config["seed"]
+    max_num_steps = config["steps"]
+    
+    mc = MountainCar(0.0, 0.0, true)
+
+    Random.seed!(seed)
+    rng = Random.default_rng()
 
     s = MinimalRLCore.get_state(mc)
-    
-    agent = construct_agent(s, length(MinimalRLCore.get_actions(mc)))
+
+    agent = construct_agent(mc, config, rng) #construct_agent(s, length(MinimalRLCore.get_actions(mc)))
 
     total_rews = Float32[]
     steps = Int[]

@@ -20,7 +20,7 @@ DoubleQLearningHuberLoss(γ) = DoubleQLearning(Float32(γ), mean_huber_loss)
 
 include("loss.jl")
 
-function update!(model,
+function update!(model::Flux.Chain,
                  lu::AbstractQLearning,
                  opt,
                  s_t,
