@@ -187,5 +187,13 @@ macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:co
     end
 end
 
+macro config_to_param(param, config_dict)
+    param_str = string(param)
+    quote
+        @assert $(param_str) ∈ keys($(esc(config_dict))) "Expected $(param_str) in config dictionary."
+        $(esc(param)) = $(esc(config_dict))[$(param_str)]
+    end
+end
+
 end # module macros
 

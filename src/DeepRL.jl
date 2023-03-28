@@ -7,8 +7,6 @@ import MacroTools: @forward
 
 import MinimalRLCore
 
-
-
 # export ExperienceReplay,
 #     WeightedExperienceReplay,
 #     OnlineReplay,
